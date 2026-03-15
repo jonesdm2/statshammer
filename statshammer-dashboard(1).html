@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statshammer — Analysis Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red:#C8102E; --gold:#D4AF37; --bg:#080808; --surface:#111111;
+  --surface2:#181818; --border:#2A2A2A;
+  --text:#F0EDE8; --dim:#5A5652; --mid:#9A9690;
+  --green:#4CAF50; --blue:#4A9ECC; --amber:#E8A020;
+  --fd:'Bebas Neue',sans-serif; --fm:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);font-family:var(--fm);color:var(--text);min-height:100vh}
+.site-header{background:#000;border-bottom:1px solid var(--border);padding:0 18px;display:flex;align-items:center;gap:16px;height:52px;position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.logo{font-family:var(--fd);font-size:24px;letter-spacing:6px;color:var(--red);flex-shrink:0}
+.ds{font-size:8px;letter-spacing:2px;padding:3px 7px;border:1px solid;flex-shrink:0}
+.ds.loading{color:var(--amber);border-color:var(--amber)}
+.ds.ok{color:var(--green);border-color:var(--green)}
+.ds.err{color:var(--red);border-color:var(--red)}
+.site-nav{display:flex;margin-left:auto;flex-wrap:wrap}
+.nb{font-family:var(--fd);font-size:10px;letter-spacing:3px;padding:6px 11px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer;white-space:nowrap;height:52px}
+.nb:hover{color:var(--mid)} .nb.active{color:var(--red);border-bottom-color:var(--red)}
+.panel{display:none;padding:18px;max-width:1100px;margin:0 auto}
+.panel.active{display:block}
+.th{margin-bottom:18px}
+.ep{font-size:9px;letter-spacing:4px;color:var(--dim);margin-bottom:3px}
+.tt{font-family:var(--fd);font-size:24px;letter-spacing:5px;color:var(--red)}
+.ts{font-size:9px;letter-spacing:2px;color:var(--mid);margin-top:4px;line-height:1.8}
+.loading-screen{padding:60px 20px;text-align:center}
+.loading-screen .ls{font-family:var(--fd);font-size:28px;letter-spacing:6px;color:var(--red);margin-bottom:14px}
+.loading-screen p{font-size:10px;letter-spacing:3px;color:var(--dim)}
+.err-screen{padding:30px 18px}
+.err-screen .et{font-family:var(--fd);font-size:16px;letter-spacing:4px;color:var(--red);margin-bottom:10px}
+.err-screen p{font-size:10px;color:var(--mid);letter-spacing:1px;line-height:2}
+.err-screen code{background:var(--surface);border:1px solid var(--border);padding:2px 5px;font-size:10px;color:var(--amber);word-break:break-all}
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:14px}
+.tab{font-family:var(--fd);font-size:10px;letter-spacing:3px;padding:7px 11px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer;white-space:nowrap;margin-bottom:-1px}
+.tab:hover{color:var(--mid)} .tab.active{color:var(--red);border-bottom-color:var(--red)}
+.stabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px}
+.stab{font-size:8px;letter-spacing:2px;padding:4px 9px;background:var(--surface);border:1px solid var(--border);color:var(--dim);cursor:pointer}
+.stab.active{border-color:var(--red);color:var(--red);background:rgba(200,16,46,0.08)}
+.nbadge{font-size:7px;color:var(--dim);border:1px solid var(--border);padding:1px 4px;margin-left:4px}
+.mc-row{display:grid;gap:5px;margin-bottom:12px}
+.mc-row.c4{grid-template-columns:repeat(4,1fr)}
+.mc-row.c5{grid-template-columns:repeat(5,1fr)}
+@media(max-width:500px){.mc-row.c4,.mc-row.c5{grid-template-columns:1fr 1fr}}
+.mc{background:var(--surface);border:1px solid var(--border);padding:9px 12px}
+.ml{font-size:7px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin-bottom:3px}
+.mv{font-family:var(--fd);font-size:19px;letter-spacing:2px;color:var(--text)}
+.mv.r{color:var(--red)} .mv.g{color:var(--green)} .mv.b{color:var(--blue)} .mv.a{color:var(--amber)}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+@media(max-width:580px){.cgrid{grid-template-columns:1fr}}
+.cc{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--red);padding:13px}
+.ct{font-family:var(--fd);font-size:10px;letter-spacing:3px;color:var(--mid);margin-bottom:8px;text-transform:uppercase}
+.br{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.bl{font-family:var(--fd);font-size:11px;letter-spacing:1px;color:var(--dim);min-width:26px;text-align:right}
+.bt{flex:1;height:17px;background:var(--surface2);border:1px solid var(--border)}
+.bf{height:100%;transition:width .3s}
+.bp{font-size:8px;color:var(--mid);min-width:32px;text-align:right}
+.bn{font-size:8px;color:var(--dim);min-width:22px}
+.sline{display:flex;gap:10px;margin-top:6px;padding-top:5px;border-top:1px solid var(--border);flex-wrap:wrap}
+.si{font-size:8px;color:var(--dim);letter-spacing:1px} .si span{color:var(--mid);font-weight:500}
+.de-block{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--red);padding:14px;margin-bottom:7px}
+.de-title{font-family:var(--fd);font-size:13px;letter-spacing:4px;color:var(--red);margin-bottom:3px}
+.de-sub{font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:9px}
+.legrow{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.legitem{display:flex;align-items:center;gap:4px;font-size:8px;letter-spacing:1px;color:var(--dim)}
+.legline{width:12px;height:2px;border-radius:1px}
+.dprow{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.dplbl{font-family:var(--fd);font-size:10px;letter-spacing:2px;min-width:140px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dptrack{flex:1;height:20px;background:var(--surface2);border:1px solid var(--border);position:relative;overflow:hidden}
+.dpmed{position:absolute;top:0;width:2px;height:100%;background:var(--red)}
+.dpmean{position:absolute;top:0;width:2px;height:100%;background:var(--blue)}
+.dpstats{font-size:8px;color:var(--mid);min-width:88px;text-align:right;white-space:nowrap}
+.dpaxis{display:flex;padding-left:147px;padding-right:96px;margin-top:2px;margin-bottom:6px}
+.dptick{flex:1;font-size:7px;color:var(--dim);text-align:center}
+.sumgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:5px;margin-top:9px}
+.sumcard{background:var(--surface2);border:1px solid var(--border);padding:9px 11px;border-left:3px solid}
+.sumcat{font-family:var(--fd);font-size:11px;letter-spacing:2px;margin-bottom:6px}
+.sumstats{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.sumstat .sl{font-size:6px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+.sumstat .sv{font-family:var(--fd);font-size:15px;letter-spacing:1px;color:var(--text)}
+.filrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.filrow input,.filrow select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:10px;padding:6px 9px}
+.filrow input:focus,.filrow select:focus{outline:none;border-color:var(--red)}
+.filrow select option{background:var(--surface2)}
+.filrow input{flex:1;min-width:150px}
+.twrap{overflow-x:auto}
+table.utbl{width:100%;border-collapse:collapse;font-size:10px}
+table.utbl th{font-family:var(--fd);font-size:8px;letter-spacing:3px;color:var(--dim);text-align:left;padding:6px 9px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+table.utbl th:hover{color:var(--mid)}
+table.utbl th.asc::after{content:' ↑'} table.utbl th.desc::after{content:' ↓'}
+table.utbl td{padding:5px 9px;border-bottom:1px solid #151515;color:var(--mid);white-space:nowrap}
+table.utbl td:first-child{color:var(--text)}
+table.utbl tr:hover td{background:rgba(255,255,255,0.02)}
+.tblpag{display:flex;gap:5px;margin-top:9px;align-items:center;flex-wrap:wrap}
+.tblpag button{font-family:var(--fd);font-size:9px;letter-spacing:2px;padding:3px 8px;background:transparent;border:1px solid var(--border);color:var(--dim);cursor:pointer}
+.tblpag button:hover{border-color:var(--mid);color:var(--mid)}
+.tblpag .pinfo{font-size:8px;color:var(--dim);letter-spacing:1px;margin-left:auto}
+.clayout{display:grid;grid-template-columns:295px 1fr;gap:13px;align-items:start}
+@media(max-width:660px){.clayout{grid-template-columns:1fr}}
+.cform{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--red);padding:16px}
+.ctitle{font-family:var(--fd);font-size:12px;letter-spacing:3px;color:var(--red);margin-bottom:10px}
+.field{margin-bottom:9px}
+.field label{font-size:7px;letter-spacing:2px;color:var(--dim);display:block;margin-bottom:4px;text-transform:uppercase}
+.field input,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:11px;padding:6px 8px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--red)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btnrun{width:100%;font-family:var(--fd);font-size:13px;letter-spacing:4px;background:var(--red);border:none;color:white;padding:10px;cursor:pointer;margin-top:5px}
+.btnrun:hover{opacity:.85} .btnrun:disabled{opacity:.4;cursor:not-allowed}
+.cres{background:var(--surface);border:1px solid var(--border);padding:16px;min-height:280px}
+.cres.hd{border-top:2px solid var(--red)}
+.rhist{display:flex;align-items:flex-end;gap:2px;height:120px;border-bottom:1px solid var(--border);margin-bottom:3px}
+.rhaxis{display:flex;margin-top:3px;margin-bottom:9px}
+.rha{flex:1;font-size:6px;color:var(--dim);text-align:center}
+.kpwrap{margin-top:10px;background:var(--surface2);border:1px solid var(--border);padding:11px}
+.kptitle{font-family:var(--fd);font-size:10px;letter-spacing:3px;color:var(--mid);margin-bottom:7px}
+.kpbars{display:flex;align-items:flex-end;gap:2px;height:70px;border-bottom:1px solid var(--border);margin-bottom:3px}
+.kpcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.kpb{width:100%;border-radius:1px 1px 0 0}
+.kpx{font-size:6px;color:var(--dim);margin-top:3px;text-align:center}
+.iqrnote{font-size:8px;color:var(--dim);letter-spacing:1px;margin-top:7px;line-height:1.9}
+.iqrnote span{color:var(--text)}
+.pmsg{font-size:10px;color:var(--dim);letter-spacing:2px;padding:36px 0;text-align:center;line-height:2.2}
+.addp{width:100%;text-align:center;font-size:8px;letter-spacing:2px;padding:5px;background:var(--surface2);border:1px solid var(--border);color:var(--dim);cursor:pointer;margin-top:7px}
+.addp:hover{border-color:var(--mid);color:var(--mid)}
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <div class="logo">STATSHAMMER</div>
+  <div class="ds loading" id="dst">LOADING…</div>
+  <nav class="site-nav">
+    <button class="nb active" onclick="showPanel('wpn',this)">WEAPON PROFILES</button>
+    <button class="nb" onclick="showPanel('eff',this)">EFFICIENCY</button>
+    <button class="nb" onclick="showPanel('units',this)">UNIT BROWSER</button>
+    <button class="nb" onclick="showPanel('calc',this)">CALCULATOR</button>
+  </nav>
+</div>
+
+<div class="panel active" id="panel-wpn">
+  <div class="th"><div class="ep">Live Data · Weapon Profiles</div><div class="tt">Profile Distributions</div><div class="ts" id="wpn-sub">Loading…</div></div>
+  <div id="wpn-body"><div class="loading-screen"><div class="ls">LOADING</div><p>Fetching spreadsheet…</p></div></div>
+</div>
+
+<div class="panel" id="panel-eff">
+  <div class="th"><div class="ep">Live Data · Efficiency</div><div class="tt">Damage Output by Category</div><div class="ts">Expected damage per profile chain · Standard 4+ save · Rend applied · All profiles summed per unit</div></div>
+  <div id="eff-body"><div class="loading-screen"><div class="ls">LOADING</div><p>Fetching spreadsheet…</p></div></div>
+</div>
+
+<div class="panel" id="panel-units">
+  <div class="th"><div class="ep">Live Data · Unit Browser</div><div class="tt">All Weapon Profiles</div><div class="ts" id="units-sub">Loading…</div></div>
+  <div id="units-body"><div class="loading-screen"><div class="ls">LOADING</div><p>Fetching spreadsheet…</p></div></div>
+</div>
+
+<div class="panel" id="panel-calc">
+  <div class="th"><div class="ep">Interactive · Monte Carlo</div><div class="tt">Live Damage Calculator</div><div class="ts">Enter any weapon profile · 10,000 simulated rounds · Mean / Median / P25 / P75 · Kill probability by wound count</div></div>
+  <div class="clayout">
+    <div>
+      <div class="cform">
+        <div class="ctitle">UNIT SETUP</div>
+        <div class="field"><label>Unit name (optional)</label><input type="text" id="c-name" placeholder="e.g. Witch Aelves"></div>
+        <div class="field-row">
+          <div class="field"><label>Models</label><input type="number" id="c-models" min="1" max="30" value="10" step="1"></div>
+          <div class="field"><label>Points cost</label><input type="number" id="c-pts" min="10" max="1000" value="115" step="5"></div>
+        </div>
+        <div class="ctitle" style="margin-top:12px">PROFILE 1</div>
+        <div class="field-row">
+          <div class="field"><label>Attacks</label><input type="text" id="c-att1" value="2" placeholder="2, D3, D6…"></div>
+          <div class="field"><label>Hit</label><select id="c-hit1"><option value="2">2+</option><option value="3" selected>3+</option><option value="4">4+</option><option value="5">5+</option></select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Wound</label><select id="c-wnd1"><option value="2">2+</option><option value="3">3+</option><option value="4" selected>4+</option><option value="5">5+</option></select></div>
+          <div class="field"><label>Rend</label><select id="c-rnd1"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
+        </div>
+        <div class="field"><label>Damage</label><input type="text" id="c-dmg1" value="1" placeholder="1, 2, D3, D6…"></div>
+        <button class="addp" onclick="toggleP2(this)" id="p2btn">+ ADD SECOND PROFILE</button>
+        <div id="p2blk" style="display:none">
+          <div class="ctitle" style="margin-top:12px">PROFILE 2</div>
+          <div class="field-row">
+            <div class="field"><label>Attacks</label><input type="text" id="c-att2" value="2"></div>
+            <div class="field"><label>Hit</label><select id="c-hit2"><option value="2">2+</option><option value="3">3+</option><option value="4" selected>4+</option><option value="5">5+</option></select></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Wound</label><select id="c-wnd2"><option value="2">2+</option><option value="3">3+</option><option value="4" selected>4+</option><option value="5">5+</option></select></div>
+            <div class="field"><label>Rend</label><select id="c-rnd2"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+          </div>
+          <div class="field"><label>Damage</label><input type="text" id="c-dmg2" value="1"></div>
+        </div>
+        <div style="margin-top:10px;background:var(--surface2);border:1px solid var(--border);padding:9px">
+          <div class="field" style="margin-bottom:0"><label>Target save (standard = 4+)</label>
+          <select id="c-save"><option value="3">3+</option><option value="4" selected>4+</option><option value="5">5+</option><option value="6">6+</option><option value="7">No save</option></select></div>
+        </div>
+        <button class="btnrun" id="runbtn" onclick="runSim()">SIMULATE — 10,000 ROUNDS</button>
+      </div>
+    </div>
+    <div class="cres" id="cres"><div class="pmsg">Configure a unit profile and click<br>SIMULATE to run the analysis.<br><br>Outputs: full damage distribution,<br>IQR, D₁₀₀, and kill probability<br>by target wound count.</div></div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:36px 18px 24px;border-top:1px solid #111;margin-top:36px">
+  <div style="font-family:var(--fd);font-size:26px;letter-spacing:8px;color:var(--red)">STATSHAMMER</div>
+  <div style="font-size:8px;letter-spacing:3px;color:var(--dim);margin-top:5px">Live from Google Sheets · AoS 4th Edition · Updates automatically</div>
+  <div style="font-size:10px;color:var(--dim);letter-spacing:3px;margin-top:14px;font-style:italic">Better data. Better decisions. Better games.</div>
+</div>
+
+<script>
+// ═══ CONFIG ═══════════════════════════════════════════════
+const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSGHCt6OZqaswa9OU6u46GhGy70L0THrwWEsEnenrAIZ4nulFn-NMuWw42i6_xFd1SyOuLw2JigNePc/pub?output=csv';
+const CAT_COLORS={hero:'#4A9ECC',infantry:'#4CAF50',cavalry:'#E8A020',monster:'#C8102E',artillery:'#D4AF37',other:'#7A7670'};
+const CAT_LABELS={hero:'Heroes',infantry:'Infantry',cavalry:'Cavalry',monster:'Monsters',artillery:'Artillery',other:'Other'};
+const CAT_ORDER=['infantry','cavalry','hero','monster','artillery','other'];
+const PROF_LABELS={pm:'Primary Melee',comp:'Companion / Mount',rng:'Ranged'};
+
+// ═══ PARSE UTILS ══════════════════════════════════════════
+function parseSave(s){const n=parseInt(s);return isNaN(n)?7:n;}
+function parseWard(s){const n=parseInt(s);return isNaN(n)?0:n;}
+function attMean(s){s=String(s||'1').trim().toUpperCase();if(s==='D3')return 2;if(s==='D6')return 3.5;if(s==='2D6')return 7;if(s==='D3+1')return 2.5;const n=parseFloat(s);return isNaN(n)?1:n;}
+function dmgMean(s){s=String(s||'1').trim().toUpperCase();if(s==='D3')return 2;if(s==='D6')return 3.5;if(s==='2D3')return 4;if(s==='2D6')return 7;if(s==='D3+1')return 2.5;if(s==='D6+1')return 4.5;const n=parseFloat(s);return isNaN(n)?1:n;}
+function pTN(s){if(!s||s==='-')return 0;const n=parseInt(s);return isNaN(n)?0:(7-n)/6;}
+function pSF(saveN,rend){const e=Math.min(saveN+parseInt(rend||0),7);return e>=7?1:(e-1)/6;}
+function rawOut(att,hit,wnd,rend,dmg,save=4){return attMean(att)*pTN(hit)*pTN(wnd)*pSF(save,rend)*dmgMean(dmg);}
+function catFromKW(kw){const p=(kw||'').toUpperCase().split(',').map(s=>s.trim());if(p.includes('HERO'))return'hero';if(p.includes('MONSTER'))return'monster';if(p.includes('WAR MACHINE')||p.includes('ARTILLERY'))return'artillery';if(p.includes('CAVALRY'))return'cavalry';if(p.includes('INFANTRY'))return'infantry';return'other';}
+function profType(r){if((r.ability||'').toLowerCase().includes('companion'))return'comp';if(r.weapon_type==='ranged'||(r.range&&r.range!=='-'&&r.range!==''))return'rng';return'pm';}
+
+// ═══ CSV PARSER ═══════════════════════════════════════════
+function parseCSV(text){
+  const lines=text.trim().split('\n');
+  if(lines.length<2)return[];
+  const hdrs=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase().replace(/\s+/g,'_'));
+  return lines.slice(1).map(line=>{
+    const vals=[];let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){const c=line[i];if(c==='"')inQ=!inQ;else if(c===','&&!inQ){vals.push(cur.trim());cur='';}else cur+=c;}
+    vals.push(cur.trim());
+    const row={};hdrs.forEach((h,i)=>row[h]=(vals[i]||'').replace(/^"|"$/g,'').trim());
+    return row;
+  }).filter(r=>r.unit_name&&r.unit_name!=='unit_name'&&r.unit_name);
+}
+
+// ═══ GLOBAL STATE ═════════════════════════════════════════
+let ROWS=[],UNITS={};
+let wpnCurCat='infantry',wpnCurProf='pm';
+let tblRows=[],tblSort={col:'unit_name',dir:1},tblPage=0,tblFiltered=[];
+const PAGE_SIZE=60;
+
+// ═══ LOAD ═════════════════════════════════════════════════
+async function loadData(){
+  setDS('loading','LOADING…');
+  try{
+    const r=await fetch(CSV_URL);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    ROWS=parseCSV(text);
+    if(!ROWS.length)throw new Error('No data rows found in CSV');
+    buildUnits();
+    setDS('ok',ROWS.length+' PROFILES');
+    renderAll();
+  }catch(e){
+    setDS('err','LOAD FAILED');
+    const eh=`<div class="err-screen"><div class="et">Failed to load spreadsheet</div>
+    <p>Make sure the sheet is published:<br><strong style="color:var(--text)">File → Share → Publish to web → CSV → Publish</strong><br><br>
+    Error: <code>${e.message}</code><br><br>CSV URL used:<br><code>${CSV_URL}</code></p></div>`;
+    ['wpn-body','eff-body','units-body'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=eh;});
+  }
+}
+function setDS(cls,txt){const el=document.getElementById('dst');el.className='ds '+cls;el.textContent=txt;}
+function buildUnits(){
+  UNITS={};
+  ROWS.forEach(r=>{
+    const k=r.unit_name+'||'+r.faction;
+    if(!UNITS[k])UNITS[k]={name:r.unit_name,faction:r.faction,health:parseFloat(r.health)||1,save:parseSave(r.save),ward:parseWard(r.ward),keywords:r.keywords||'',cat:catFromKW(r.keywords||''),profiles:[]};
+    UNITS[k].profiles.push({weapon_name:r.weapon_name,ptype:profType(r),att:r.attacks,hit:r.hit,wnd:r.wound,rend:parseInt(r.rend)||0,dmg:r.damage,range:r.range,ability:r.ability,raw:rawOut(r.attacks,r.hit,r.wound,parseInt(r.rend)||0,r.damage)});
+  });
+}
+
+// ═══ NAV ══════════════════════════════════════════════════
+function showPanel(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ═══ TOOL 1: WEAPON PROFILES ══════════════════════════════
+function buildWpnData(){
+  const cats={};
+  ROWS.forEach(r=>{
+    const cat=catFromKW(r.keywords||'');
+    const pt=profType(r);
+    if(!cats[cat])cats[cat]={};
+    if(!cats[cat][pt])cats[cat][pt]=[];
+    cats[cat][pt].push({att:r.attacks,hit:r.hit,wnd:r.wound,rend:String(parseInt(r.rend)||0),dmg:r.damage});
+  });
+  return cats;
+}
+function distStat(vals){
+  if(!vals||!vals.length)return null;
+  const n=vals.length,counts={},pcts={};
+  vals.forEach(v=>{counts[v]=(counts[v]||0)+1;});
+  const labels=Object.keys(counts).sort((a,b)=>{const na=parseFloat(a),nb=parseFloat(b);return isNaN(na)||isNaN(nb)?a.localeCompare(b):na-nb;});
+  labels.forEach(l=>pcts[l]=+(counts[l]/n*100).toFixed(1));
+  const nv=vals.map(v=>{const x=parseFloat(v);return isNaN(x)?0:x;});
+  const mean=+(nv.reduce((s,v)=>s+v,0)/n).toFixed(2);
+  const med=[...nv].sort((a,b)=>a-b)[Math.floor(n/2)];
+  return{labels,counts,pcts,mean,med,n};
+}
+function renderWpnCharts(wpnData,cat,prof){
+  const area=document.getElementById('wpn-charts');if(!area)return;
+  const profs=wpnData[cat];
+  if(!profs||!profs[prof]){area.innerHTML=`<p style="color:var(--dim);font-size:10px;letter-spacing:2px;padding:1rem">No ${PROF_LABELS[prof]||prof} profiles for this category.</p>`;return;}
+  const rows=profs[prof],color=CAT_COLORS[cat]||'#7A7670';
+  const sts={att:distStat(rows.map(r=>r.att)),hit:distStat(rows.map(r=>r.hit)),wnd:distStat(rows.map(r=>r.wnd)),rend:distStat(rows.map(r=>r.rend)),dmg:distStat(rows.map(r=>r.dmg))};
+  const TITLES={att:'ATTACKS',hit:'HIT ROLL',wnd:'WOUND ROLL',rend:'REND',dmg:'DAMAGE'};
+  let h='<div class="cgrid">';
+  ['att','hit','wnd','rend','dmg'].forEach(stat=>{
+    const s=sts[stat];if(!s)return;
+    const maxP=Math.max(...s.labels.map(l=>s.pcts[l]));
+    const isTN=stat==='hit'||stat==='wnd';
+    h+=`<div class="cc"><div class="ct">${TITLES[stat]}</div>`;
+    s.labels.forEach(lbl=>{
+      const pct=s.pcts[lbl],cnt=s.counts[lbl];
+      const w=maxP>0?(pct/maxP*100).toFixed(1):0;
+      h+=`<div class="br"><div class="bl">${lbl}</div><div class="bt"><div class="bf" style="width:${w}%;background:${pct===maxP?color:color+'44'}"></div></div><div class="bp">${pct.toFixed(1)}%</div><div class="bn">(${cnt})</div></div>`;
+    });
+    h+=`<div class="sline"><div class="si">MEAN <span>${s.mean}${isTN?'+':''}</span></div><div class="si">MEDIAN <span>${s.med}${isTN?'+':''}</span></div><div class="si">n=<span>${s.n}</span></div></div></div>`;
+  });
+  h+='</div>';area.innerHTML=h;
+}
+function renderWpnTool(wpnData){
+  const cats=CAT_ORDER.filter(c=>wpnData[c]&&Object.keys(wpnData[c]).length);
+  const totalU=Object.keys(UNITS).length,totalP=ROWS.length;
+  document.getElementById('wpn-sub').textContent=`${totalP} weapon profiles · ${totalU} units · Live from Google Sheets`;
+  let h=`<div class="tabs" id="wpn-tabs">`;
+  cats.forEach(c=>{
+    const cnt=Object.values(wpnData[c]).reduce((s,a)=>s+a.length,0);
+    h+=`<button class="tab${c===wpnCurCat?' active':''}" onclick="wpnSetCat('${c}',this)">${CAT_LABELS[c]}<span class="nbadge">${cnt}</span></button>`;
+  });
+  h+=`</div><div id="wpn-ptabs" class="stabs"></div><div id="wpn-charts"></div>`;
+  document.getElementById('wpn-body').innerHTML=h;
+  wpnUpdateProf(wpnData,wpnCurCat);
+}
+function wpnSetCat(cat,btn){wpnCurCat=cat;document.querySelectorAll('#wpn-tabs .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');wpnUpdateProf(buildWpnData(),cat);}
+function wpnUpdateProf(wpnData,cat){
+  const profs=wpnData[cat]||{};
+  const avail=['pm','comp','rng'].filter(k=>profs[k]&&profs[k].length);
+  if(!avail.includes(wpnCurProf))wpnCurProf=avail[0]||'pm';
+  const ptEl=document.getElementById('wpn-ptabs');
+  if(ptEl){ptEl.innerHTML=avail.map(k=>`<button class="stab${k===wpnCurProf?' active':''}" onclick="wpnSetProf('${k}',this)">${PROF_LABELS[k]}<span class="nbadge">n=${profs[k].length}</span></button>`).join('');}
+  renderWpnCharts(wpnData,cat,wpnCurProf);
+}
+function wpnSetProf(prof,btn){wpnCurProf=prof;document.querySelectorAll('#wpn-ptabs .stab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderWpnCharts(buildWpnData(),wpnCurCat,prof);}
+
+// ═══ TOOL 2: EFFICIENCY ═══════════════════════════════════
+function renderEffTool(){
+  const catData={};
+  Object.values(UNITS).forEach(u=>{
+    const cat=u.cat;
+    if(!catData[cat])catData[cat]=[];
+    catData[cat].push(u.profiles.reduce((s,p)=>s+p.raw,0));
+  });
+  const cats=CAT_ORDER.filter(c=>catData[c]&&catData[c].length);
+  const allVals=Object.values(catData).flat();
+  const RMAX=Math.ceil(Math.max(...allVals,1)*1.1);
+  let h=`<div class="mc-row c4" style="margin-bottom:16px">
+    <div class="mc"><div class="ml">Units</div><div class="mv">${Object.keys(UNITS).length}</div></div>
+    <div class="mc"><div class="ml">Profiles</div><div class="mv">${ROWS.length}</div></div>
+    <div class="mc"><div class="ml">Factions</div><div class="mv">${[...new Set(ROWS.map(r=>r.faction))].length}</div></div>
+    <div class="mc"><div class="ml">Target save</div><div class="mv">4+</div></div>
+  </div>
+  <div class="de-block">
+    <div class="de-title">Expected damage output per unit</div>
+    <div class="de-sub">Att × P(hit) × P(wound) × P(save fails 4+) × Dmg · all profiles summed · rend applied</div>
+    <div class="legrow"><div class="legitem"><div class="legline" style="background:var(--red)"></div>MEDIAN</div><div class="legitem"><div class="legline" style="background:var(--blue)"></div>MEAN</div></div>`;
+  cats.forEach(cat=>{
+    const vals=catData[cat],n=vals.length;
+    const sorted=[...vals].sort((a,b)=>a-b);
+    const mean=+(vals.reduce((s,v)=>s+v,0)/n).toFixed(2);
+    const med=+sorted[Math.floor(n/2)].toFixed(2);
+    const color=CAT_COLORS[cat]||'#7A7670';
+    const mp=(med/RMAX*100).toFixed(1),ap=(mean/RMAX*100).toFixed(1);
+    const BC=8,bs=RMAX/BC;
+    const bins=Array(BC).fill(0);
+    vals.forEach(v=>{bins[Math.min(Math.floor(v/bs),BC-1)]++;});
+    const mx=Math.max(...bins,1);
+    let bars='';
+    bins.forEach((cnt,i)=>{const l=(i*bs/RMAX*100).toFixed(1),w=(bs/RMAX*100).toFixed(1),bh=Math.max(5,(cnt/mx*100)).toFixed(1);bars+=`<div style="position:absolute;left:${l}%;width:calc(${w}% - 1px);bottom:0;height:${bh}%;background:${color}"></div>`;});
+    h+=`<div class="dprow">
+      <div class="dplbl" style="color:${color}" title="${CAT_LABELS[cat]}">${CAT_LABELS[cat]}<span class="nbadge">${n}</span></div>
+      <div class="dptrack">${bars}<div class="dpmed" style="left:${mp}%"></div><div class="dpmean" style="left:${ap}%"></div></div>
+      <div class="dpstats">md <span style="color:var(--red)">${med}</span> · μ <span style="color:var(--blue)">${mean}</span></div>
+    </div>`;
+  });
+  const ticks=6;
+  h+=`<div class="dpaxis">`;
+  for(let i=0;i<=ticks;i++)h+=`<div class="dptick">${+(RMAX*i/ticks).toFixed(1)}</div>`;
+  h+=`</div></div><div class="sumgrid">`;
+  cats.forEach(cat=>{
+    const vals=catData[cat],n=vals.length,sorted=[...vals].sort((a,b)=>a-b);
+    const mean=+(vals.reduce((s,v)=>s+v,0)/n).toFixed(2),med=+sorted[Math.floor(n/2)].toFixed(2);
+    const color=CAT_COLORS[cat]||'#7A7670';
+    h+=`<div class="sumcard" style="border-left-color:${color}"><div class="sumcat" style="color:${color}">${CAT_LABELS[cat]}</div>
+    <div class="sumstats">
+      <div class="sumstat"><div class="sl">Output mean</div><div class="sv" style="color:var(--red)">${mean}</div></div>
+      <div class="sumstat"><div class="sl">Output median</div><div class="sv">${med}</div></div>
+      <div class="sumstat"><div class="sl">Units</div><div class="sv">${n}</div></div>
+      <div class="sumstat"><div class="sl">Profiles</div><div class="sv">${vals.length}</div></div>
+    </div></div>`;
+  });
+  h+=`</div><div style="margin-top:7px;background:var(--surface);border:1px solid var(--border);padding:10px 12px;font-size:9px;color:var(--mid);letter-spacing:1px;line-height:2">
+    <strong style="color:var(--text)">NOTE:</strong> "Output" = raw expected damage per attack sequence (not D₁₀₀). True D₁₀₀ requires a points cost column. 
+    Add a <code style="color:var(--amber)">pts</code> column to your sheet and the dashboard will compute D₁₀₀ automatically.</div>`;
+  document.getElementById('eff-body').innerHTML=h;
+}
+
+// ═══ TOOL 3: UNIT BROWSER ═════════════════════════════════
+const TBL_COLS=[{k:'unit_name',l:'UNIT'},{k:'faction',l:'FACTION'},{k:'cat',l:'CAT'},{k:'weapon_name',l:'WEAPON'},{k:'ptype',l:'TYPE'},{k:'attacks',l:'ATT'},{k:'hit',l:'HIT'},{k:'wound',l:'WND'},{k:'rend',l:'R'},{k:'damage',l:'DMG'},{k:'range',l:'RNG'},{k:'raw',l:'OUTPUT'}];
+
+function renderUnitsTool(){
+  tblRows=ROWS.map(r=>({unit_name:r.unit_name,faction:r.faction,cat:catFromKW(r.keywords||''),weapon_name:r.weapon_name,ptype:profType(r),attacks:r.attacks,hit:r.hit,wound:r.wound,rend:r.rend,damage:r.damage,range:r.range||'—',raw:+rawOut(r.attacks,r.hit,r.wound,parseInt(r.rend)||0,r.damage).toFixed(3)}));
+  const factions=[...new Set(ROWS.map(r=>r.faction))].sort();
+  document.getElementById('units-sub').textContent=`${ROWS.length} weapon profiles from ${Object.keys(UNITS).length} units across ${factions.length} factions`;
+  let h=`<div class="filrow">
+    <input type="text" id="tbl-s" placeholder="Search unit, weapon, faction…" oninput="tblFilter()">
+    <select id="tbl-f" onchange="tblFilter()"><option value="">All factions</option>${factions.map(f=>`<option>${f}</option>`).join('')}</select>
+    <select id="tbl-c" onchange="tblFilter()"><option value="">All categories</option>${CAT_ORDER.map(c=>`<option value="${c}">${CAT_LABELS[c]}</option>`).join('')}</select>
+    <select id="tbl-p" onchange="tblFilter()"><option value="">All profile types</option><option value="pm">Primary Melee</option><option value="comp">Companion</option><option value="rng">Ranged</option></select>
+  </div><div class="twrap" id="twrap"></div><div class="tblpag" id="tblpag"></div>`;
+  document.getElementById('units-body').innerHTML=h;
+  tblFilter();
+}
+function tblFilter(){
+  const s=(document.getElementById('tbl-s').value||'').toLowerCase();
+  const f=document.getElementById('tbl-f').value;
+  const c=document.getElementById('tbl-c').value;
+  const p=document.getElementById('tbl-p').value;
+  tblFiltered=tblRows.filter(r=>{
+    if(f&&r.faction!==f)return false;
+    if(c&&r.cat!==c)return false;
+    if(p&&r.ptype!==p)return false;
+    if(s&&!(r.unit_name.toLowerCase().includes(s)||r.faction.toLowerCase().includes(s)||(r.weapon_name||'').toLowerCase().includes(s)))return false;
+    return true;
+  });
+  tblFiltered.sort((a,b)=>{let av=a[tblSort.col]||'',bv=b[tblSort.col]||'';const an=parseFloat(av),bn=parseFloat(bv);if(!isNaN(an)&&!isNaN(bn))return(an-bn)*tblSort.dir;return String(av).localeCompare(String(bv))*tblSort.dir;});
+  tblPage=0;renderTbl();
+}
+function renderTbl(){
+  const start=tblPage*PAGE_SIZE;
+  const pageRows=tblFiltered.slice(start,start+PAGE_SIZE);
+  let h='<table class="utbl"><thead><tr>';
+  TBL_COLS.forEach(col=>{const cls=col.k===tblSort.col?(tblSort.dir===1?'asc':'desc'):'';h+=`<th class="${cls}" onclick="tblSortBy('${col.k}')">${col.l}</th>`;});
+  h+='</tr></thead><tbody>';
+  pageRows.forEach(r=>{
+    const color=CAT_COLORS[r.cat]||'#7A7670';
+    const ptc=r.ptype==='comp'?'var(--amber)':r.ptype==='rng'?'var(--blue)':'var(--dim)';
+    h+=`<tr><td>${r.unit_name}</td><td style="color:var(--dim)">${r.faction}</td>
+    <td><span style="color:${color};font-family:var(--fd);font-size:8px;letter-spacing:2px">${CAT_LABELS[r.cat]||r.cat}</span></td>
+    <td>${r.weapon_name||'—'}</td><td style="color:${ptc};font-size:8px;letter-spacing:1px">${PROF_LABELS[r.ptype]||r.ptype}</td>
+    <td style="color:var(--text)">${r.attacks}</td><td>${r.hit}</td><td>${r.wound}</td><td>${r.rend}</td><td>${r.damage}</td>
+    <td style="color:var(--dim)">${r.range&&r.range!=='—'&&r.range!=='-'?r.range+'"':'—'}</td>
+    <td style="color:${r.raw>=1?'var(--green)':'var(--mid)'}">${r.raw}</td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById('twrap').innerHTML=h;
+  const tp=Math.ceil(tblFiltered.length/PAGE_SIZE)||1;
+  let ph=`<span class="pinfo">${tblFiltered.length} profiles · page ${tblPage+1}/${tp}</span>`;
+  if(tblPage>0)ph=`<button onclick="tblGo(${tblPage-1})">← PREV</button>`+ph;
+  if(tblPage<tp-1)ph+=`<button onclick="tblGo(${tblPage+1})">NEXT →</button>`;
+  document.getElementById('tblpag').innerHTML=ph;
+}
+function tblSortBy(col){if(tblSort.col===col)tblSort.dir*=-1;else{tblSort.col=col;tblSort.dir=1;}tblFilter();}
+function tblGo(p){tblPage=p;renderTbl();}
+
+// ═══ TOOL 4: LIVE CALCULATOR ══════════════════════════════
+function toggleP2(btn){const b=document.getElementById('p2blk');if(b.style.display==='none'){b.style.display='block';btn.textContent='− REMOVE SECOND PROFILE';}else{b.style.display='none';btn.textContent='+ ADD SECOND PROFILE';}}
+function rollD(spec){spec=String(spec).toUpperCase();if(spec==='D3')return Math.floor(Math.random()*3)+1;if(spec==='D6')return Math.floor(Math.random()*6)+1;if(spec==='D3+1')return Math.floor(Math.random()*3)+2;if(spec==='D6+1')return Math.floor(Math.random()*6)+2;if(spec==='2D3')return(Math.floor(Math.random()*3)+1)+(Math.floor(Math.random()*3)+1);if(spec==='2D6')return(Math.floor(Math.random()*6)+1)+(Math.floor(Math.random()*6)+1);const n=parseInt(spec);return isNaN(n)?1:n;}
+function rollAtt(spec){spec=String(spec).toUpperCase();if(spec==='D3')return Math.floor(Math.random()*3)+1;if(spec==='D6')return Math.floor(Math.random()*6)+1;if(spec==='2D6')return(Math.floor(Math.random()*6)+1)+(Math.floor(Math.random()*6)+1);if(spec==='D3+1')return Math.floor(Math.random()*3)+2;const n=parseInt(spec);return isNaN(n)?1:n;}
+function simProf(attS,hitTN,wndTN,rend,dmgS,models,sv,sims){
+  const es=Math.min(sv+parseInt(rend||0),7);
+  const res=new Int16Array(sims);
+  for(let s=0;s<sims;s++){let t=0;for(let m=0;m<models;m++){const a=rollAtt(attS);for(let i=0;i<a;i++){if(Math.random()*6+1<hitTN)continue;if(Math.random()*6+1<wndTN)continue;if(es<=6&&Math.random()*6+1>=es)continue;t+=rollD(dmgS);}}res[s]=t;}
+  return res;
+}
+function simSt(arr){
+  const s=[...arr].sort((a,b)=>a-b),n=s.length;
+  const mean=s.reduce((x,v)=>x+v,0)/n;
+  const med=s[Math.floor(n/2)],p25=s[Math.floor(n*.25)],p75=s[Math.floor(n*.75)],p10=s[Math.floor(n*.1)],p90=s[Math.floor(n*.9)];
+  const pz=+(s.filter(v=>v===0).length/n*100).toFixed(1);
+  const mv=Math.max(...arr);
+  const bp={};for(let i=0;i<=mv;i++)bp[i]=0;arr.forEach(v=>{if(v<=mv)bp[v]++;});
+  Object.keys(bp).forEach(k=>{bp[k]=+(bp[k]/n*100).toFixed(2);});
+  return{mean:+mean.toFixed(2),med,p25,p75,p10,p90,pz,mv,bp};
+}
+function runSim(){
+  const SIMS=10000,btn=document.getElementById('runbtn'),res=document.getElementById('cres');
+  btn.disabled=true;btn.textContent='SIMULATING…';
+  res.innerHTML='<div class="pmsg" style="color:var(--amber)">RUNNING 10,000 SIMULATIONS…</div>';
+  setTimeout(()=>{
+    try{
+      const models=Math.max(1,parseInt(document.getElementById('c-models').value)||1);
+      const pts=Math.max(10,parseInt(document.getElementById('c-pts').value)||100);
+      const att1=document.getElementById('c-att1').value||'1';
+      const hit1=parseInt(document.getElementById('c-hit1').value);
+      const wnd1=parseInt(document.getElementById('c-wnd1').value);
+      const rnd1=parseInt(document.getElementById('c-rnd1').value);
+      const dmg1=document.getElementById('c-dmg1').value||'1';
+      const sv=parseInt(document.getElementById('c-save').value);
+      const name=document.getElementById('c-name').value||'Unit';
+      const hasP2=document.getElementById('p2blk').style.display!=='none';
+      const r1=simProf(att1,hit1,wnd1,rnd1,dmg1,models,sv,SIMS);
+      let comb=r1;
+      if(hasP2){
+        const att2=document.getElementById('c-att2').value||'1';
+        const hit2=parseInt(document.getElementById('c-hit2').value);
+        const wnd2=parseInt(document.getElementById('c-wnd2').value);
+        const rnd2=parseInt(document.getElementById('c-rnd2').value);
+        const dmg2=document.getElementById('c-dmg2').value||'1';
+        const r2=simProf(att2,hit2,wnd2,rnd2,dmg2,models,sv,SIMS);
+        const c=new Int16Array(SIMS);for(let i=0;i<SIMS;i++)c[i]=r1[i]+r2[i];comb=c;
+      }
+      const sc=simSt(comb);
+      const d100=+(sc.mean/(pts/100)).toFixed(2);
+      const mk=Math.min(sc.mv,35);
+      const mb=Math.max(...Object.values(sc.bp));
+      let hH='<div class="rhist">';
+      for(let i=0;i<=mk;i++){const p=sc.bp[i]||0,bh=p>0?Math.max(2,(p/mb*110)):0,isI=i>=sc.p25&&i<=sc.p75,isM=i===sc.med;hH+=`<div style="flex:1;min-width:2px;height:${bh}px;background:${isM?'#fff':'#C8102E'};opacity:${isM?1:isI?.85:.35};border-radius:1px 1px 0 0" title="${i} dmg: ${p.toFixed(1)}%"></div>`;}
+      hH+='</div><div class="rhaxis">';
+      for(let i=0;i<=mk;i++)hH+=`<div class="rha">${i%5===0?i:''}</div>`;
+      hH+='</div>';
+      const mTW=Math.min(20,Math.ceil(sc.mean*2.5)+3);
+      const kpV=[];const ts=comb.length;
+      for(let tw=1;tw<=mTW;tw++)kpV.push({tw,p:+([...comb].filter(v=>v>=tw).length/ts*100).toFixed(1)});
+      const mkp=Math.max(...kpV.map(k=>k.p),1);
+      let kH='<div class="kpbars">';
+      kpV.forEach(k=>{const bh=Math.max(1,(k.p/mkp*62)).toFixed(1),col=k.p>=50?'#C8102E':k.p>=25?'#E8A020':'#4A9ECC';kH+=`<div class="kpcol"><div class="kpb" style="height:${bh}px;background:${col}" title="${k.tw}W: ${k.p}%"></div><div class="kpx">${k.tw}</div></div>`;});
+      kH+='</div>';
+      res.className='cres hd';
+      res.innerHTML=`<div style="font-family:var(--fd);font-size:15px;letter-spacing:4px;color:var(--text);margin-bottom:10px">${name.toUpperCase()}</div>
+      <div style="font-size:7px;letter-spacing:2px;color:var(--dim);margin-bottom:10px">${models} MODEL${models>1?'S':''} · ${pts}PTS · ${SIMS.toLocaleString()} SIMS · ${sv}+ SAVE</div>
+      <div class="mc-row c4" style="margin-bottom:8px">
+        <div class="mc"><div class="ml">Mean</div><div class="mv a">${sc.mean}</div></div>
+        <div class="mc"><div class="ml">Median</div><div class="mv">${sc.med}</div></div>
+        <div class="mc"><div class="ml">P25–P75</div><div class="mv b">${sc.p25}–${sc.p75}</div></div>
+        <div class="mc"><div class="ml">D₁₀₀</div><div class="mv r">${d100}</div></div>
+      </div>
+      <div class="mc-row c4" style="margin-bottom:10px">
+        <div class="mc"><div class="ml">IQR width</div><div class="mv">${sc.p75-sc.p25}</div></div>
+        <div class="mc"><div class="ml">P(zero)</div><div class="mv" style="color:${sc.pz>10?'var(--amber)':sc.pz>2?'var(--red)':'var(--dim)'}">${sc.pz}%</div></div>
+        <div class="mc"><div class="ml">P10–P90</div><div class="mv">${sc.p10}–${sc.p90}</div></div>
+        <div class="mc"><div class="ml">Max rolled</div><div class="mv">${sc.mv}</div></div>
+      </div>
+      ${hH}
+      <div class="iqrnote">IQR <span style="color:var(--red)">(highlighted)</span>: <span>${sc.p25}–${sc.p75}</span> · Median <span style="color:white">(white bar)</span>: <span>${sc.med}</span> · Mean: <span>${sc.mean}</span><br>Half of all combat rounds produce between <span>${sc.p25}</span> and <span>${sc.p75}</span> wounds.</div>
+      <div class="kpwrap"><div class="kptitle">KILL PROBABILITY — by target wound count</div>${kH}<div style="font-size:7px;color:var(--dim);letter-spacing:1px;margin-top:5px">Red ≥50% · Amber 25–50% · Blue &lt;25% · Hover for exact %</div></div>`;
+    }catch(e){res.innerHTML=`<div style="color:var(--red);font-size:10px;padding:16px">Error: ${e.message}</div>`;}
+    btn.disabled=false;btn.textContent='SIMULATE — 10,000 ROUNDS';
+  },50);
+}
+
+// ═══ INIT ═════════════════════════════════════════════════
+function renderAll(){
+  const wpnData=buildWpnData();
+  const firstCat=CAT_ORDER.find(c=>wpnData[c]&&Object.keys(wpnData[c]).length)||'infantry';
+  wpnCurCat=firstCat;
+  renderWpnTool(wpnData);
+  renderEffTool();
+  renderUnitsTool();
+}
+loadData();
+</script>
+</body>
+</html>
