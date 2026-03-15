@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Statshammer · Unit Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090d; --surf:#0c1018; --card:#111620;
+  --b1:#1a2333;  --b2:#243040;
+  --red:#e8001c; --blue:#0057ff; --gold:#f0a500;
+  --teal:#00c9b1; --purple:#9b59f5;
+  --g50:#f0f6ff; --g100:#dce8f5; --g200:#b0c8e0;
+  --g300:#7090a8; --g400:#3a5060; --g500:#1e2d3d; --g600:#131d2a;
+  --qhammer:rgba(232,0,28,.13); --qelite:rgba(240,165,0,.13);
+  --qanvil:rgba(0,87,255,.13);  --qsupport:rgba(30,45,61,.45);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Barlow','Segoe UI',sans-serif;background:var(--bg);color:var(--g100);overflow:hidden}
+
+/* HEADER */
+#hdr{position:fixed;top:0;left:0;right:0;height:52px;background:var(--surf);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 20px;gap:16px;z-index:200}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:.14em;color:var(--g50);white-space:nowrap}
+.logo em{color:var(--red);font-style:normal}
+.vsep{width:1px;height:24px;background:var(--b2);flex-shrink:0}
+.nav{display:flex;gap:2px}
+.nb{padding:5px 14px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;border:1px solid transparent;border-radius:3px;cursor:pointer;color:var(--g300);background:transparent;transition:all .15s}
+.nb:hover{color:var(--g100);border-color:var(--b2)}
+.nb.on{color:var(--g50);background:var(--card);border-color:var(--b2)}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+#ubadge{font-family:'DM Mono',monospace;font-size:10px;color:var(--g400)}
+#loadbadge{font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:3px;background:var(--g500);color:var(--g300)}
+#loadbadge.ok{background:rgba(0,201,177,.15);color:var(--teal)}
+#loadbadge.err{background:rgba(232,0,28,.15);color:var(--red)}
+
+/* SHELL + SIDEBAR */
+#shell{position:fixed;top:52px;bottom:0;left:0;right:0;display:flex}
+#sb{width:252px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--b1);display:flex;flex-direction:column;overflow:hidden}
+.ss{padding:12px 14px 0}
+.sl{font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--g400);margin-bottom:5px}
+select,input[type=text]{width:100%;background:var(--card);border:1px solid var(--b2);border-radius:3px;color:var(--g100);padding:6px 9px;font-family:'Barlow',sans-serif;font-size:12px;outline:none;transition:border-color .15s}
+select:focus,input:focus{border-color:var(--blue)}
+select option{background:var(--card)}
+.srch{position:relative}
+.srch input{padding-left:26px}
+.sico{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--g400);font-size:12px;pointer-events:none}
+#ulist{flex:1;overflow-y:auto;margin:8px 14px 0;border:1px solid var(--b1);border-radius:3px}
+.ur{padding:7px 10px;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;cursor:pointer;border-bottom:1px solid var(--b1);color:var(--g200);transition:background .1s}
+.ur:last-child{border-bottom:none}
+.ur:hover{background:var(--card);color:var(--g50)}
+.ur.sel{background:rgba(0,87,255,.12);color:var(--g50);border-left:2px solid var(--blue)}
+.un{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.utag{font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:2px;background:var(--g500);color:var(--g300);flex-shrink:0;margin-left:5px}
+.sdiv{height:1px;background:var(--b1);margin:10px 0}
+.sctrl{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.trow{display:flex;gap:4px}
+.tgl{flex:1;padding:5px 0;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-align:center;cursor:pointer;border:1px solid var(--b2);border-radius:3px;color:var(--g300);background:transparent;transition:all .15s}
+.tgl.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tgl.on-r{background:var(--red);color:#fff;border-color:var(--red)}
+.tgl.on-g{background:var(--gold);color:#000;border-color:var(--gold)}
+.ckr{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--g300);cursor:pointer}
+.ckr input{width:auto;cursor:pointer;accent-color:var(--blue)}
+
+/* MAIN */
+#main{flex:1;overflow-y:auto;overflow-x:hidden;padding:18px;display:flex;flex-direction:column;gap:14px}
+
+/* PANEL */
+.pan{background:var(--card);border:1px solid var(--b1);border-radius:5px;overflow:hidden}
+.ph{padding:11px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:12px}
+.pt{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g50)}
+.psub{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--g400)}
+.pb{padding:14px}
+.pbf{padding:0}
+canvas{display:block}
+
+/* WARSCROLL */
+#wscard{background:var(--card);border:1px solid var(--b1);border-radius:5px;overflow:hidden}
+.wfbar{height:3px;background:var(--blue)}
+.whead{padding:14px 18px 10px;border-bottom:1px solid var(--b1);display:flex;align-items:flex-end;gap:20px;justify-content:space-between}
+.wname{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.08em;color:var(--g50);line-height:1}
+.wfac{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:3px}
+.wkw{font-size:10px;color:var(--g400);letter-spacing:.05em;text-transform:uppercase}
+.wpts{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--g300);white-space:nowrap}
+.wpts span{font-size:11px;color:var(--g400);letter-spacing:.08em}
+
+.wsrow{display:flex;border-bottom:1px solid var(--b1)}
+.wst{flex:1;padding:12px 0;text-align:center;border-right:1px solid var(--b1)}
+.wst:last-child{border-right:none}
+.wsv{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.05em;line-height:1;color:var(--g50)}
+.wsv.hi{color:var(--blue)} .wsv.red{color:var(--red)} .wsv.gold{color:var(--gold)}
+.wsl{font-size:8.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--g400);margin-top:2px}
+
+.wcrow{display:flex;background:rgba(0,87,255,.06);border-bottom:1px solid var(--b1)}
+.wcs{flex:1;padding:10px 0;text-align:center;border-right:1px solid var(--b1)}
+.wcs:last-child{border-right:none}
+.wcv{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--blue);line-height:1}
+.wcl{font-size:8px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--g400);margin-top:3px}
+.wcv.red{color:var(--red)} .wcv.gold{color:var(--gold)} .wcv.teal{color:var(--teal)} .wcv.pur{color:var(--purple)}
+
+.wwtbl{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace}
+.wwtbl thead th{padding:7px 12px;text-align:left;font-size:8.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--g400);background:var(--surf);border-bottom:1px solid var(--b1);white-space:nowrap}
+.wwtbl tbody td{padding:8px 12px;font-size:11px;color:var(--g200);border-bottom:1px solid var(--b1);vertical-align:middle}
+.wwtbl tbody tr:last-child td{border-bottom:none}
+.wwtbl tbody tr:hover td{background:rgba(255,255,255,.02)}
+.tmelee{color:var(--red);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.trange{color:var(--gold);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.wnum{text-align:center;font-weight:500;color:var(--g100)}
+.wab{font-size:9.5px;color:var(--g400);font-family:'Barlow',sans-serif}
+.wbar{height:3px;background:var(--g500);border-radius:2px;overflow:hidden;margin-top:3px}
+.wbf{height:100%;border-radius:2px;transition:width .4s}
+
+/* KPI GRID */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px}
+.kpi{background:var(--surf);border:1px solid var(--b1);border-radius:4px;padding:10px 12px}
+.kv{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.04em;line-height:1;color:var(--g50)}
+.kv.acc{color:var(--blue)} .kv.red{color:var(--red)} .kv.gold{color:var(--gold)} .kv.teal{color:var(--teal)}
+.kl{font-size:8.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--g400);margin-top:2px}
+.kc{font-size:9px;color:var(--g400);margin-top:1px;font-family:'DM Mono',monospace}
+
+/* REG STRIP */
+.rstrip{display:flex;flex-wrap:wrap;border-top:1px solid var(--b1);background:rgba(0,0,0,.25)}
+.rs{padding:7px 14px;font-family:'DM Mono',monospace;font-size:10px;color:var(--g400);border-right:1px solid var(--b1)}
+.rs span{color:var(--g100)}
+
+/* TOOLTIP */
+#tip{position:fixed;z-index:999;background:var(--surf);border:1px solid var(--b2);border-radius:5px;padding:10px 13px;pointer-events:none;opacity:0;transition:opacity .1s;box-shadow:0 12px 32px rgba(0,0,0,.6);min-width:180px}
+#tip.vis{opacity:1}
+.ttn{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--g50);margin-bottom:4px}
+.ttf{font-size:9px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.ttr{display:flex;justify-content:space-between;gap:14px;font-size:10.5px;color:var(--g300);padding:1px 0;font-family:'DM Mono',monospace}
+.ttr span{color:var(--g100)}
+.ttq{margin-top:6px;padding-top:6px;border-top:1px solid var(--b1);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+
+.empty{padding:48px 24px;text-align:center;color:var(--g400)}
+.wpn-tgl{width:100%;padding:5px 8px;text-align:left;font-family:'Barlow',sans-serif;font-size:10.5px;cursor:pointer;border:1px solid var(--b2);border-radius:3px;color:var(--g300);background:transparent;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wpn-tgl.on{border-color:currentColor;color:var(--g100);background:rgba(255,255,255,.05)}
+.wpn-tgl.all-on{border-color:var(--teal);color:var(--teal);background:rgba(0,201,177,.08)}
+.ei{font-size:32px;margin-bottom:12px}
+.em{font-size:13px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div class="logo">STATS<em>HAMMER</em></div>
+  <div class="vsep"></div>
+  <nav class="nav" id="nav">
+    <button class="nb on"  onclick="setTab('ws')">Warscroll</button>
+    <button class="nb"     onclick="setTab('st')">Unit Stats</button>
+    <button class="nb"     onclick="setTab('mx')">Efficiency Matrix</button>
+    <button class="nb"     onclick="setTab('dd')">Damage Distribution</button>
+  </nav>
+  <div class="hdr-right">
+    <span id="loadbadge">LOADING</span>
+    <span id="ubadge"></span>
+  </div>
+</div>
+
+<div id="shell">
+<div id="sb">
+  <div class="ss" style="padding-top:14px">
+    <div class="sl">Faction</div>
+    <select id="selFac" onchange="onFacChange()">
+      <option value="">All Factions</option>
+    </select>
+  </div>
+  <div class="ss" style="padding-top:10px">
+    <div class="sl">Search</div>
+    <div class="srch">
+      <span class="sico">⌕</span>
+      <input type="text" id="inpQ" placeholder="Unit name…" oninput="renderList()">
+    </div>
+  </div>
+  <div id="ulist" style="flex:1;overflow-y:auto;margin:8px 14px 0;border:1px solid var(--b1);border-radius:3px">
+    <div style="padding:14px;text-align:center;font-size:11px;color:var(--g400)">Loading data…</div>
+  </div>
+  <div class="sdiv"></div>
+
+  <div class="sctrl" id="cws"></div>
+
+  <div class="sctrl hidden" id="cst">
+    <div class="sl">Weapon Filter</div>
+    <div class="trow">
+      <button class="tgl on"  id="wfA" onclick="setWF('all')">All</button>
+      <button class="tgl"     id="wfM" onclick="setWF('melee')">Melee</button>
+      <button class="tgl"     id="wfR" onclick="setWF('ranged')">Ranged</button>
+    </div>
+  </div>
+
+  <div class="sctrl hidden" id="cmx">
+    <div class="sl">Baseline</div>
+    <div class="trow">
+      <button class="tgl on" id="mxAll" onclick="setBaseline('all')">All AoS</button>
+      <button class="tgl"    id="mxFac" onclick="setBaseline('faction')">Faction</button>
+    </div>
+    <label class="ckr"><input type="checkbox" id="chkTL" checked onchange="drawMx()"> Trend line</label>
+    <label class="ckr"><input type="checkbox" id="chkAA" onchange="drawMx()"> All-AoS avg cross</label>
+  </div>
+
+  <div class="sctrl hidden" id="cdd">
+    <div class="sl">Target Save</div>
+    <select id="selSv" onchange="drawDd()">
+      <option value="2">2+ (elite)</option>
+      <option value="3">3+</option>
+      <option value="4" selected>4+ (standard)</option>
+      <option value="5">5+</option>
+      <option value="6">6+</option>
+      <option value="7">No save</option>
+    </select>
+    <div class="sl" style="margin-top:8px">Iterations</div>
+    <select id="selIt" onchange="drawDd()">
+      <option value="5000">5,000</option>
+      <option value="10000" selected>10,000</option>
+      <option value="25000">25,000</option>
+    </select>
+    <div class="sl" style="margin-top:8px">Weapon Profiles</div>
+    <div id="wpnToggles" style="display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+</div>
+
+<div id="main">
+
+<!-- WARSCROLL -->
+<div id="tws">
+  <div class="empty" id="wsEmp"><div class="ei">📜</div><div class="em">Select a unit to view its warscroll</div></div>
+  <div class="hidden" id="wsWrap">
+    <div id="wscard">
+      <div class="wfbar" id="wfbar"></div>
+      <div class="whead">
+        <div>
+          <div class="wfac"  id="wFac"></div>
+          <div class="wname" id="wNm"></div>
+          <div class="wkw"   id="wKw"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="wpts" id="wPts"></div>
+        </div>
+      </div>
+      <div class="wsrow">
+        <div class="wst"><div class="wsv"     id="wMv"></div><div class="wsl">Move</div></div>
+        <div class="wst"><div class="wsv red" id="wHp"></div><div class="wsl">Health</div></div>
+        <div class="wst"><div class="wsv hi"  id="wSv"></div><div class="wsl">Save</div></div>
+        <div class="wst"><div class="wsv gold"id="wWd"></div><div class="wsl">Ward</div></div>
+        <div class="wst"><div class="wsv"     id="wCt"></div><div class="wsl">Control</div></div>
+      </div>
+      <div class="wcrow">
+        <div class="wcs"><div class="wcv"      id="wcD"></div>  <div class="wcl" id="wcDL">Dmg (unit)</div></div>
+        <div class="wcs"><div class="wcv red"  id="wcM"></div>  <div class="wcl">Melee Dmg</div></div>
+        <div class="wcs"><div class="wcv gold" id="wcR"></div>  <div class="wcl">Ranged Dmg</div></div>
+        <div class="wcs"><div class="wcv"      id="wcEH"></div> <div class="wcl" id="wcEHL">Eff. HP (unit)</div></div>
+        <div class="wcs"><div class="wcv"      id="wcQ" style="font-size:13px;letter-spacing:.06em"></div><div class="wcl">Quadrant</div></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="wwtbl">
+          <thead><tr>
+            <th>Weapon</th><th>Type</th>
+            <th style="text-align:center">Atk</th><th style="text-align:center">Hit</th>
+            <th style="text-align:center">Wnd</th><th style="text-align:center">Rnd</th>
+            <th style="text-align:center">Dmg</th><th style="text-align:center">Range</th>
+            <th>Ability</th><th style="text-align:right;min-width:80px">Avg Dmg</th>
+          </tr></thead>
+          <tbody id="wWpn"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div id="tst" class="hidden">
+  <div class="empty" id="stEmp"><div class="ei">📊</div><div class="em">Select a unit to view stats</div></div>
+  <div class="hidden" id="stWrap">
+    <div class="kgrid" id="kgrid"></div>
+    <div class="pan" style="margin-top:12px">
+      <div class="ph">
+        <div class="pt" id="stPT">Weapons</div>
+        <div class="psub" id="stPS"></div>
+      </div>
+      <div class="pbf">
+        <table class="wwtbl">
+          <thead><tr>
+            <th>Weapon</th><th>Type</th>
+            <th style="text-align:center">Atk</th><th style="text-align:center">Hit</th>
+            <th style="text-align:center">Wnd</th><th style="text-align:center">Rnd</th>
+            <th style="text-align:center">Dmg</th><th>Ability</th>
+            <th style="text-align:right">Avg Dmg</th><th style="width:60px">Bar</th>
+          </tr></thead>
+          <tbody id="stWpn"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MATRIX -->
+<div id="tmx" class="hidden">
+  <div class="pan">
+    <div class="ph">
+      <div>
+        <div class="pt">Efficiency Matrix</div>
+        <div class="psub" id="mxSub">Raw EH vs D · All AoS baseline</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:14px;align-items:center">
+        <span style="font-size:9px;color:var(--red);font-weight:700;letter-spacing:.08em">■ HAMMER</span>
+        <span style="font-size:9px;color:var(--gold);font-weight:700;letter-spacing:.08em">■ ELITE</span>
+        <span style="font-size:9px;color:var(--blue);font-weight:700;letter-spacing:.08em">■ ANVIL</span>
+        <span style="font-size:9px;color:var(--g300);font-weight:700;letter-spacing:.08em">■ SUPPORT</span>
+      </div>
+    </div>
+    <div class="pbf"><canvas id="cvMx" height="520"></canvas></div>
+    <div class="rstrip" id="rstrip">
+      <div class="rs">N <span id="rN">—</span></div>
+      <div class="rs">R² <span id="rR2">—</span></div>
+      <div class="rs">Slope <span id="rSl">—</span></div>
+      <div class="rs">Intercept <span id="rIn">—</span></div>
+      <div class="rs" id="rAD">All-AoS avg EH <span id="rADv">—</span></div>
+      <div class="rs" id="rAE">All-AoS avg D <span id="rAEv">—</span></div>
+      <div class="rs hidden" id="rFD">Faction avg EH <span id="rFDv">—</span></div>
+      <div class="rs hidden" id="rFE">Faction avg D <span id="rFEv">—</span></div>
+      <div class="rs hidden" id="rFR2">Faction R² <span id="rFR2v">—</span></div>
+      <div class="rs hidden" id="rFSl">Faction Slope <span id="rFSlv">—</span></div>
+      <div class="rs hidden" id="rFIn">Faction Intercept <span id="rFInv">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- DISTRIBUTION -->
+<div id="tdd" class="hidden">
+  <div class="empty" id="ddEmp"><div class="ei">📈</div><div class="em">Select a unit to view damage distribution</div></div>
+  <div class="hidden" id="ddWrap">
+    <div class="pan">
+      <div class="ph">
+        <div class="pt" id="ddT">Damage Distribution</div>
+        <div class="psub" id="ddS">Monte Carlo · 10,000 iterations · vs 4+ save</div>
+      </div>
+      <div class="pbf"><canvas id="cvDd" height="340"></canvas></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<div id="tip">
+  <div class="ttn" id="ttN"></div>
+  <div class="ttf" id="ttF"></div>
+  <div class="ttr">D <span id="ttD"></span></div>
+  <div class="ttr">EH <span id="ttEH"></span></div>
+  <div class="ttr">Melee <span id="ttM"></span></div>
+  <div class="ttr">Ranged <span id="ttR"></span></div>
+  <div class="ttq" id="ttQ"></div>
+</div>
+
+<script>
+// ═══════════════ CSV CONFIG ═══════════════
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSGHCt6OZqaswa9OU6u46GhGy70L0THrwWEsEnenrAIZ4nulFn-NMuWw42i6_xFd1SyOuLw2JigNePc/pub?output=csv';
+
+// ═══════════════ PARSE HELPERS ═══════════════
+function parseSave(s){
+  if(!s)return 7;
+  const m=String(s).match(/(\d+)/);
+  return m?parseInt(m[1]):7;
+}
+function parseWard(s){
+  if(!s||s===''||s==='0')return 0;
+  const m=String(s).match(/(\d+)/);
+  return m?parseInt(m[1]):0;
+}
+function parseMean(v){
+  if(v===null||v===undefined||v==='')return 0;
+  const s=String(v).toLowerCase().trim();
+  const m=s.match(/^(\d+)?d(\d+)([+-]\d+)?$/);
+  if(m)return(parseInt(m[1]||1)*(parseInt(m[2])+1)/2)+parseInt(m[3]||0);
+  return parseFloat(v)||0;
+}
+function parseHit(v){
+  const n=parseInt(v)||4;
+  return(7-n)/6;
+}
+function parseWound(v){
+  const n=parseInt(v)||4;
+  return(7-n)/6;
+}
+function calcDmg(w,sv=4){
+  const a=parseMean(w.attacks);
+  const h=parseHit(w.hit);
+  const wn=parseWound(w.wound);
+  const r=parseInt(w.rend)||0;
+  const d=parseMean(w.damage);
+  const es=Math.max(1,Math.min(6,sv+r));
+  const saveFail=es<=6?1-Math.max(0,(7-es)/6):1;
+  return a*h*wn*saveFail*d;
+}
+function calcEH(hp,save,ward){
+  const sv=parseSave(save);
+  const wd=parseWard(ward);
+  // Effective health vs 4+ no rend
+  let survivalPerWound=1;
+  if(sv<=6) survivalPerWound*=1/(1-Math.max(0,(7-sv)/6));
+  if(wd>0&&wd<=6) survivalPerWound*=1/(1-(7-wd)/6);
+  return hp*survivalPerWound;
+}
+function isCompanion(ability){return /companion/i.test(ability||'')}
+function isRanged(type,range){return (type||'').toLowerCase()==='ranged'||(range&&range!==''&&range!=='0')}
+
+// ═══════════════ BUILD UNITS FROM CSV ═══════════════
+function buildUnits(rows){
+  const map=new Map();
+  rows.forEach(r=>{
+    const key=r.unit_name+'|||'+r.faction;
+    if(!map.has(key)){
+      map.set(key,{
+        name:r.unit_name,
+        faction:r.faction,
+        health:parseInt(r.health)||1,
+        save:r.save,
+        ward:r.ward,
+        move:r.move,
+        control:r.control,
+        keywords:(r.keywords||'').split(',').map(k=>k.trim()).filter(Boolean),
+        weapons:[],
+        size:1,
+        champIdx:null
+      });
+    }
+    const u=map.get(key);
+    if(!isCompanion(r.ability)){
+      u.weapons.push({
+        name:r.weapon_name,
+        type:(r.weapon_type||'melee').toLowerCase(),
+        attacks:r.attacks,
+        hit:parseInt(r.hit)||4,
+        wound:parseInt(r.wound)||4,
+        rend:parseInt(r.rend)||0,
+        damage:r.damage,
+        range:r.range,
+        ability:r.ability
+      });
+    }
+  });
+  const units=[];
+  map.forEach(u=>{
+    const meleeWpns=u.weapons.filter(w=>!isRanged(w.type,w.range));
+    const rangedWpns=u.weapons.filter(w=>isRanged(w.type,w.range));
+    u.meleeDmg=meleeWpns.reduce((s,w)=>s+calcDmg(w),0);
+    u.rangedDmg=rangedWpns.reduce((s,w)=>s+calcDmg(w),0);
+    u.totalDmg=u.meleeDmg+u.rangedDmg;
+    u.eHealth=calcEH(u.health,u.save,u.ward);
+    units.push(u);
+  });
+  return units;
+}
+
+// ═══════════════ STATE ═══════════════
+let UNITS=[];
+let FACS=[];
+let AVG_D=0,AVG_EH=0;
+let FAC_AVGS={};
+let tab='ws',fac='',unit=null,baseline='all',wf='all';
+
+// ═══════════════ FACTION COLORS ═══════════════
+const FC={
+  'Stormcast Eternals':'#4488ff','Blades of Khorne':'#cc1122','Maggotkin of Nurgle':'#557722',
+  'Disciples of Tzeentch':'#aa44cc','Hedonites of Slaanesh':'#cc88aa','Slaves to Darkness':'#775533',
+  'Flesh-eater Courts':'#886644','Nighthaunt':'#44aaaa','Ossiarch Bonereapers':'#aaaaaa',
+  'Soulblight Gravelords':'#882244','Ironjawz':'#226633','Kruleboyz':'#448833',
+  'Gloomspite Gitz':'#997722','Bonesplitterz':'#884411','Sons of Behemat':'#666666',
+  'Ogor Mawtribes':'#aa6633','Daughters of Khaine':'#cc2266','Lumineth Realm-lords':'#ddbb44',
+  'Idoneth Deepkin':'#226699','Sylvaneth':'#448844','Cities of Sigmar':'#4466aa',
+  'Kharadron Overlords':'#558899','Fyreslayers':'#cc5511','Seraphon':'#337755',
+  'Skaven':'#776633','Helsmiths of Hashut':'#775544','Beasts of Chaos':'#664422',
+};
+function fc(f){return FC[f]||'#0057ff';}
+
+// ═══════════════ FETCH CSV ═══════════════
+async function loadCSV(){
+  const badge=document.getElementById('loadbadge');
+  try{
+    const res=await fetch(CSV_URL);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const lines=text.trim().split('\n');
+    const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+    const rows=lines.slice(1).map(line=>{
+      // CSV parse respecting quoted fields
+      const vals=[];
+      let cur='',inQ=false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='"'){inQ=!inQ;}
+        else if(c===','&&!inQ){vals.push(cur.trim());cur='';}
+        else{cur+=c;}
+      }
+      vals.push(cur.trim());
+      const obj={};
+      headers.forEach((h,i)=>obj[h]=vals[i]||'');
+      return obj;
+    }).filter(r=>r.unit_name&&r.faction);
+
+    UNITS=buildUnits(rows);
+    FACS=[...new Set(UNITS.map(u=>u.faction))].sort();
+
+    // Compute global averages
+    AVG_D=UNITS.reduce((s,u)=>s+u.totalDmg,0)/UNITS.length;
+    AVG_EH=UNITS.reduce((s,u)=>s+u.eHealth,0)/UNITS.length;
+
+    // Per-faction averages
+    FACS.forEach(f=>{
+      const fu=UNITS.filter(u=>u.faction===f);
+      FAC_AVGS[f]={
+        avgDmg:fu.reduce((s,u)=>s+u.totalDmg,0)/fu.length,
+        avgEH:fu.reduce((s,u)=>s+u.eHealth,0)/fu.length
+      };
+    });
+
+    // Populate faction dropdown
+    const sel=document.getElementById('selFac');
+    FACS.forEach(f=>{
+      const opt=document.createElement('option');
+      opt.value=f;opt.textContent=f;
+      sel.appendChild(opt);
+    });
+
+    badge.textContent=UNITS.length+' UNITS';
+    badge.className='ok';
+    document.getElementById('ubadge').textContent=UNITS.length+' units · '+FACS.length+' factions';
+
+    renderList();
+    if(tab==='mx')drawMx();
+  }catch(e){
+    badge.textContent='LOAD FAILED';
+    badge.className='err';
+    document.getElementById('ulist').innerHTML='<div style="padding:14px;text-align:center;font-size:11px;color:var(--red)">Failed to load data.<br>Check network or CORS.</div>';
+    console.error(e);
+  }
+}
+
+// ═══════════════ HELPERS ═══════════════
+function fmtN(v,dp=2){return(v==null||isNaN(v))?'—':Number(v).toFixed(dp);}
+
+function getAxD(){
+  if(baseline==='faction'&&fac&&FAC_AVGS[fac])return FAC_AVGS[fac].avgEH;
+  return AVG_EH;
+}
+function getAxE(){
+  if(baseline==='faction'&&fac&&FAC_AVGS[fac])return FAC_AVGS[fac].avgDmg;
+  return AVG_D;
+}
+
+function quad(u){
+  const d=u.totalDmg,e=u.eHealth;
+  const axD=getAxD(),axE=getAxE();
+  const hi=d>=axE,tk=e>=axD;
+  if(hi&&tk)  return{lbl:'ELITE',  col:'#f0a500'};
+  if(hi&&!tk) return{lbl:'HAMMER', col:'#e8001c'};
+  if(!hi&&tk) return{lbl:'ANVIL',  col:'#0057ff'};
+  return          {lbl:'SUPPORT',col:'#7090a8'};
+}
+
+// ═══════════════ TAB ═══════════════
+const TABS=['ws','st','mx','dd'];
+const CIDS={ws:'cws',st:'cst',mx:'cmx',dd:'cdd'};
+const TIDS={ws:'tws',st:'tst',mx:'tmx',dd:'tdd'};
+function setTab(t){
+  tab=t;
+  document.querySelectorAll('.nb').forEach((b,i)=>b.classList.toggle('on',TABS[i]===t));
+  TABS.forEach(id=>{
+    document.getElementById(TIDS[id]).classList.toggle('hidden',id!==t);
+    document.getElementById(CIDS[id]).classList.toggle('hidden',id!==t);
+  });
+  if(t==='mx'){setTimeout(drawMx,30);}
+  if(t==='dd'&&unit){renderDdToggles(unit);drawDd();}
+  if(t==='st'&&unit)renderSt(unit);
+}
+
+// ═══════════════ LIST ═══════════════
+function getList(){
+  let us=UNITS;
+  if(fac)us=us.filter(u=>u.faction===fac);
+  const q=document.getElementById('inpQ').value.toLowerCase();
+  if(q)us=us.filter(u=>u.name.toLowerCase().includes(q));
+  return us;
+}
+function renderList(){
+  if(!UNITS.length)return;
+  const us=getList();
+  const el=document.getElementById('ulist');
+  if(!us.length){el.innerHTML='<div style="padding:14px;text-align:center;font-size:11px;color:var(--g400)">No units</div>';return;}
+  el.innerHTML=us.map(u=>{
+    const sel=unit&&unit.name===u.name&&unit.faction===u.faction?' sel':'';
+    const q=quad(u);
+    const ico=u.weapons.some(w=>isRanged(w.type,w.range))?'🏹':'⚔';
+    return`<div class="ur${sel}" onclick="selUnit(${JSON.stringify(u.name)},${JSON.stringify(u.faction)})">
+      <span class="un">${u.name}</span>
+      <span class="utag" style="color:${q.col}">${q.lbl[0]}</span>
+      <span class="utag">${ico}</span>
+    </div>`;
+  }).join('');
+}
+function selUnit(n,f){
+  unit=UNITS.find(u=>u.name===n&&u.faction===f)||null;
+  _wpnActive=new Set(['__all__']);
+  renderList();
+  if(unit&&tab==='dd'){renderDdToggles(unit);}
+  dispatch();
+}
+function dispatch(){
+  if(!unit)return;
+  if(tab==='ws')renderWs(unit);
+  if(tab==='st')renderSt(unit);
+  if(tab==='mx')drawMx();
+  if(tab==='dd')drawDd();
+}
+function onFacChange(){
+  fac=document.getElementById('selFac').value;
+  unit=null;
+  baseline=fac?'faction':'all';
+  // sync baseline buttons
+  document.getElementById('mxAll').classList.toggle('on',baseline==='all');
+  document.getElementById('mxFac').classList.toggle('on',baseline==='faction');
+  ['rFD','rFE'].forEach(id=>document.getElementById(id).classList.toggle('hidden',!fac));
+  if(!fac)['rFR2','rFSl','rFIn'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('mxSub').textContent='Raw EH vs D · '+(fac?fac:'All AoS')+' baseline';
+  renderList();
+  if(tab==='mx')drawMx();
+}
+function setBaseline(b){
+  baseline=b;
+  document.getElementById('mxAll').classList.toggle('on',b==='all');
+  document.getElementById('mxFac').classList.toggle('on',b==='faction');
+  renderList();drawMx();
+}
+
+// ═══════════════ WARSCROLL ═══════════════
+function renderWs(u){
+  document.getElementById('wsEmp').classList.add('hidden');
+  document.getElementById('wsWrap').classList.remove('hidden');
+  const c=fc(u.faction);
+  document.getElementById('wfbar').style.background=c;
+  document.getElementById('wFac').textContent=u.faction.toUpperCase();
+  document.getElementById('wFac').style.color=c;
+  document.getElementById('wNm').textContent=u.name;
+  document.getElementById('wKw').textContent=u.keywords.join(' · ');
+  document.getElementById('wMv').textContent=u.move?u.move+'"':'—';
+  document.getElementById('wHp').textContent=u.health;
+  document.getElementById('wSv').textContent=u.save||'—';
+  const wd=parseWard(u.ward);
+  document.getElementById('wWd').textContent=wd?wd+'+':'—';
+  document.getElementById('wCt').textContent=u.control||'—';
+  document.getElementById('wPts').innerHTML='<span style="color:var(--g500)">—</span>';
+  document.getElementById('wcD').textContent=fmtN(u.totalDmg);
+  document.getElementById('wcM').textContent=fmtN(u.meleeDmg);
+  document.getElementById('wcR').textContent=fmtN(u.rangedDmg);
+  document.getElementById('wcEH').textContent=fmtN(u.eHealth);
+  const q=quad(u);
+  const qEl=document.getElementById('wcQ');
+  qEl.textContent=q.lbl;qEl.style.color=q.col;
+  const maxD=Math.max(...u.weapons.map(w=>calcDmg(w)),0.001);
+  document.getElementById('wWpn').innerHTML=u.weapons.map(w=>{
+    const d=calcDmg(w),pct=maxD?(d/maxD*100).toFixed(0):0;
+    const ranged=isRanged(w.type,w.range);
+    const tc=ranged?'trange':'tmelee';
+    const bc=ranged?'var(--gold)':'var(--red)';
+    const typeLabel=ranged?'ranged':'melee';
+    return`<tr>
+      <td style="font-weight:500;color:var(--g100)">${w.name}</td>
+      <td><span class="${tc}">${typeLabel}</span></td>
+      <td class="wnum">${w.attacks}</td><td class="wnum">${w.hit}+</td>
+      <td class="wnum">${w.wound}+</td><td class="wnum">${w.rend?'-'+w.rend:'—'}</td>
+      <td class="wnum">${w.damage}</td>
+      <td class="wnum">${w.range?w.range+'"':'—'}</td>
+      <td class="wab">${w.ability||'—'}</td>
+      <td style="text-align:right">
+        <div style="font-weight:500;color:var(--g100)">${d.toFixed(3)}</div>
+        <div class="wbar"><div class="wbf" style="width:${pct}%;background:${bc}"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════ STATS ═══════════════
+function setWF(f){
+  wf=f;
+  ['A','M','R'].forEach(s=>{
+    const el=document.getElementById('wf'+s);
+    el.className='tgl';
+    if((s==='A'&&f==='all')||(s==='M'&&f==='melee')||(s==='R'&&f==='ranged'))
+      el.className='tgl '+(s==='A'?'on':s==='M'?'on-r':'on-g');
+  });
+  if(unit)renderSt(unit);
+}
+function renderSt(u){
+  document.getElementById('stEmp').classList.add('hidden');
+  document.getElementById('stWrap').classList.remove('hidden');
+  document.getElementById('stPT').textContent=u.name.toUpperCase();
+  document.getElementById('stPS').textContent=u.faction;
+  const q=quad(u);
+  const kpis=[
+    {v:u.health,l:'Health',cls:'red'},
+    {v:u.save||'—',l:'Save',cls:'acc'},
+    {v:(parseWard(u.ward)?parseWard(u.ward)+'++':'—'),l:'Ward',cls:'gold'},
+    {v:u.move?u.move+'"':'—',l:'Move',cls:''},
+    {v:u.control||'—',l:'Control',cls:''},
+    {v:fmtN(u.totalDmg),l:'Dmg (unit)',cls:'acc',c:'vs 4+ save'},
+    {v:fmtN(u.eHealth),l:'Eff. HP',cls:'acc'},
+    {v:q.lbl,l:'Quadrant',cls:'',style:`color:${q.col}`},
+  ];
+  document.getElementById('kgrid').innerHTML=kpis.map(k=>
+    `<div class="kpi">
+      <div class="kv ${k.cls||''}" ${k.style?`style="${k.style}"`:''} >${k.v}</div>
+      <div class="kl">${k.l}</div>
+      ${k.c?`<div class="kc">${k.c}</div>`:''}
+    </div>`
+  ).join('');
+  let ws=u.weapons;
+  if(wf==='melee')ws=ws.filter(w=>!isRanged(w.type,w.range));
+  else if(wf==='ranged')ws=ws.filter(w=>isRanged(w.type,w.range));
+  const maxD=Math.max(...u.weapons.map(w=>calcDmg(w)),0.001);
+  document.getElementById('stWpn').innerHTML=ws.map(w=>{
+    const d=calcDmg(w),pct=maxD?(d/maxD*100).toFixed(0):0;
+    const ranged=isRanged(w.type,w.range);
+    const tc=ranged?'trange':'tmelee';
+    const bc=ranged?'var(--gold)':'var(--red)';
+    return`<tr>
+      <td style="font-weight:500;color:var(--g100)">${w.name}</td>
+      <td><span class="${tc}">${ranged?'ranged':'melee'}</span></td>
+      <td class="wnum">${w.attacks}</td><td class="wnum">${w.hit}+</td>
+      <td class="wnum">${w.wound}+</td><td class="wnum">${w.rend?'-'+w.rend:'—'}</td>
+      <td class="wnum">${w.damage}</td>
+      <td class="wab">${w.ability||'—'}</td>
+      <td style="text-align:right;font-weight:500">${d.toFixed(3)}</td>
+      <td><div class="wbar"><div class="wbf" style="width:${pct}%;background:${bc}"></div></div></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="10" style="padding:14px;text-align:center;color:var(--g400)">No weapons match filter</td></tr>';
+}
+
+// ═══════════════ MATRIX ═══════════════
+let _mpts=[];
+function reg(xs,ys){
+  const n=xs.length;if(n<2)return null;
+  const mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;
+  let sxx=0,sxy=0,syy=0;
+  for(let i=0;i<n;i++){sxx+=(xs[i]-mx)**2;sxy+=(xs[i]-mx)*(ys[i]-my);syy+=(ys[i]-my)**2;}
+  const sl=sxx?sxy/sxx:0;
+  return{slope:sl,intercept:my-sl*mx,r2:sxx&&syy?(sxy**2)/(sxx*syy):0};
+}
+function drawMx(){
+  if(!UNITS.length)return;
+  const cv=document.getElementById('cvMx');
+  const ctx=cv.getContext('2d');
+  const W=cv.parentElement.clientWidth||800;
+  cv.width=W;cv.height=520;
+  const P={l:60,r:24,t:28,b:52};
+  const PW=W-P.l-P.r,PH=cv.height-P.t-P.b;
+
+  let us=UNITS;
+  if(fac)us=us.filter(u=>u.faction===fac);
+  if(!us.length){
+    ctx.fillStyle='#3a5060';ctx.font='14px Barlow';ctx.textAlign='center';
+    ctx.fillText('No data for selected faction',W/2,260);return;
+  }
+
+  // X = EH (survivability), Y = D (damage)
+  const getDv=u=>u.eHealth;
+  const getEv=u=>u.totalDmg;
+  const axD=getAxD(); // X threshold (EH)
+  const axE=getAxE(); // Y threshold (D)
+
+  const maxD=Math.max(...us.map(getDv))*1.12||20;
+  const maxE=Math.max(...us.map(getEv))*1.12||20;
+  const tx=d=>P.l+(d/maxD)*PW;
+  const ty=e=>P.t+PH-(e/maxE)*PH;
+  const qx=tx(axD),qy=ty(axE);
+
+  // Quadrant fills
+  const QDEFS=[
+    {x:P.l,  y:P.t,  w:qx-P.l,    h:qy-P.t,      fill:'var(--qanvil)',   lbl:'ANVIL',   sub:'Tough, low damage',    lc:'rgba(0,87,255,.7)',    corner:'tl'},
+    {x:qx,   y:P.t,  w:P.l+PW-qx, h:qy-P.t,       fill:'var(--qelite)',   lbl:'ELITE',   sub:'Tough & hard-hitting', lc:'rgba(240,165,0,.7)',   corner:'tr'},
+    {x:P.l,  y:qy,   w:qx-P.l,    h:P.t+PH-qy,    fill:'var(--qsupport)', lbl:'SUPPORT', sub:'Low damage & fragile', lc:'rgba(150,170,185,.6)', corner:'bl'},
+    {x:qx,   y:qy,   w:P.l+PW-qx, h:P.t+PH-qy,    fill:'var(--qhammer)',  lbl:'HAMMER',  sub:'High damage, fragile', lc:'rgba(232,0,28,.7)',    corner:'br'},
+  ];
+  QDEFS.forEach(q=>{
+    ctx.fillStyle=q.fill;ctx.fillRect(q.x,q.y,q.w,q.h);
+    const PAD=14;
+    const tx2=q.corner.includes('r')?q.x+q.w-PAD:q.x+PAD;
+    const ty2=q.corner.includes('b')?q.y+q.h-PAD-14:q.y+PAD+14;
+    const align=q.corner.includes('r')?'right':'left';
+    ctx.save();ctx.textAlign=align;
+    ctx.font='bold 13px Barlow Condensed';ctx.fillStyle=q.lc;ctx.fillText(q.lbl,tx2,ty2);
+    ctx.font='10px Barlow';ctx.globalAlpha=.55;ctx.fillStyle=q.lc;ctx.fillText(q.sub,tx2,ty2+14);
+    ctx.restore();
+  });
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const gy=P.t+(PH/5)*i;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+PW,gy);ctx.stroke();
+    const gx=P.l+(PW/5)*i;ctx.beginPath();ctx.moveTo(gx,P.t);ctx.lineTo(gx,P.t+PH);ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+PH);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(P.l,P.t+PH);ctx.lineTo(P.l+PW,P.t+PH);ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle='#3a5060';ctx.font='9px DM Mono';ctx.textAlign='center';
+  for(let i=0;i<=5;i++)ctx.fillText((maxD/5*i).toFixed(1),P.l+(PW/5)*i,P.t+PH+15);
+  ctx.textAlign='right';
+  for(let i=0;i<=5;i++)ctx.fillText((maxE/5*i).toFixed(1),P.l-6,P.t+PH-(PH/5)*i+3);
+  ctx.save();ctx.translate(14,P.t+PH/2);ctx.rotate(-Math.PI/2);
+  ctx.fillStyle='#3a5060';ctx.font='10px Barlow';ctx.textAlign='center';
+  ctx.fillText('Damage Output',0,0);ctx.restore();
+  ctx.fillStyle='#3a5060';ctx.font='10px Barlow';ctx.textAlign='center';
+  ctx.fillText('Effective Health',P.l+PW/2,P.t+PH+38);
+
+  // All-AoS avg cross
+  const showAllAoS=!fac||document.getElementById('chkAA').checked;
+  if(showAllAoS){
+    const ax=tx(AVG_EH),ay=ty(AVG_D);
+    ctx.strokeStyle='rgba(255,255,255,.2)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(ax,P.t);ctx.lineTo(ax,P.t+PH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(P.l,ay);ctx.lineTo(P.l+PW,ay);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='8px DM Mono';ctx.textAlign='left';
+    ctx.fillText('All AoS',ax+3,P.t+10);
+  }
+
+  // Faction avg cross
+  if(fac&&FAC_AVGS[fac]){
+    const fa=FAC_AVGS[fac];
+    const fax=tx(fa.avgEH),fay=ty(fa.avgDmg);
+    ctx.strokeStyle='rgba(0,201,177,.55)';ctx.lineWidth=1.5;ctx.setLineDash([6,3]);
+    ctx.beginPath();ctx.moveTo(fax,P.t);ctx.lineTo(fax,P.t+PH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(P.l,fay);ctx.lineTo(P.l+PW,fay);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(0,201,177,.7)';ctx.font='bold 8px DM Mono';ctx.textAlign='left';
+    ctx.fillText(fac+' avg',fax+3,P.t+(showAllAoS?22:10));
+  }
+
+  // Regression line
+  const rxs=us.map(getDv),rys=us.map(getEv);
+  const rv=reg(rxs,rys);
+  if(rv&&document.getElementById('chkTL').checked){
+    ctx.strokeStyle='rgba(155,89,245,.45)';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+    ctx.beginPath();ctx.moveTo(tx(0),ty(rv.intercept));ctx.lineTo(tx(maxD),ty(rv.intercept+rv.slope*maxD));
+    ctx.stroke();ctx.setLineDash([]);
+  }
+
+  // Points
+  _mpts=[];
+  const selN=unit?.name,selF=unit?.faction;
+  us.forEach(u=>{
+    const dv=getDv(u),ev=getEv(u);
+    const x=tx(dv),y=ty(ev);
+    const isSel=u.name===selN&&u.faction===selF;
+    const r=isSel?6:3;
+    if(isSel){ctx.beginPath();ctx.arc(x,y,r+5,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.08)';ctx.fill();}
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=isSel?'#fff':fac?fc(u.faction)+'cc':'rgba(176,200,224,.5)';
+    ctx.fill();
+    if(isSel){ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,r+2,0,Math.PI*2);ctx.stroke();}
+    _mpts.push({u,x,y});
+  });
+
+  // Stats strip
+  if(rv){
+    document.getElementById('rN').textContent=us.length;
+    document.getElementById('rR2').textContent=rv.r2.toFixed(4);
+    document.getElementById('rSl').textContent=rv.slope.toFixed(4);
+    document.getElementById('rIn').textContent=rv.intercept.toFixed(4);
+    document.getElementById('rADv').textContent=AVG_EH.toFixed(3);
+    document.getElementById('rAEv').textContent=AVG_D.toFixed(3);
+    if(fac&&FAC_AVGS[fac]){
+      const fa=FAC_AVGS[fac];
+      document.getElementById('rFDv').textContent=fa.avgEH.toFixed(3);
+      document.getElementById('rFEv').textContent=fa.avgDmg.toFixed(3);
+      ['rFD','rFE'].forEach(id=>document.getElementById(id).classList.remove('hidden'));
+      if(us.length>=2){
+        const frv=reg(us.map(getDv),us.map(getEv));
+        if(frv){
+          document.getElementById('rFR2v').textContent=frv.r2.toFixed(4);
+          document.getElementById('rFSlv').textContent=frv.slope.toFixed(4);
+          document.getElementById('rFInv').textContent=frv.intercept.toFixed(4);
+          ['rFR2','rFSl','rFIn'].forEach(id=>document.getElementById(id).classList.remove('hidden'));
+        }
+      }
+    }else{
+      ['rFD','rFE','rFR2','rFSl','rFIn'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+    }
+  }
+}
+
+// Matrix mouse
+const cvMx=document.getElementById('cvMx');
+cvMx.addEventListener('mousemove',e=>{
+  const r=cvMx.getBoundingClientRect(),sx=cvMx.width/r.width,sy=cvMx.height/r.height;
+  const cx=(e.clientX-r.left)*sx,cy=(e.clientY-r.top)*sy;
+  let near=null,dist=16;
+  _mpts.forEach(p=>{const d=Math.hypot(p.x-cx,p.y-cy);if(d<dist){dist=d;near=p;}});
+  const tp=document.getElementById('tip');
+  if(near){
+    const u=near.u,q=quad(u);
+    document.getElementById('ttN').textContent=u.name;
+    document.getElementById('ttF').textContent=u.faction;
+    document.getElementById('ttD').textContent=fmtN(u.totalDmg);
+    document.getElementById('ttEH').textContent=fmtN(u.eHealth);
+    document.getElementById('ttM').textContent=fmtN(u.meleeDmg);
+    document.getElementById('ttR').textContent=fmtN(u.rangedDmg);
+    const qEl=document.getElementById('ttQ');
+    qEl.textContent=q.lbl;qEl.style.color=q.col;
+    tp.style.left=(e.clientX+14)+'px';tp.style.top=(e.clientY-10)+'px';
+    tp.classList.add('vis');
+  }else tp.classList.remove('vis');
+});
+cvMx.addEventListener('mouseleave',()=>document.getElementById('tip').classList.remove('vis'));
+cvMx.addEventListener('click',e=>{
+  const r=cvMx.getBoundingClientRect(),sx=cvMx.width/r.width,sy=cvMx.height/r.height;
+  const cx=(e.clientX-r.left)*sx,cy=(e.clientY-r.top)*sy;
+  let near=null,dist=16;
+  _mpts.forEach(p=>{const d=Math.hypot(p.x-cx,p.y-cy);if(d<dist){dist=d;near=p;}});
+  if(near)selUnit(near.u.name,near.u.faction);
+});
+
+// ═══════════════ DISTRIBUTION ═══════════════
+let _wpnActive=new Set(['__all__']);
+const WPN_COLORS=['rgba(232,0,28,.80)','rgba(240,165,0,.80)','rgba(0,87,255,.80)','rgba(0,201,177,.80)','rgba(155,89,245,.80)','rgba(176,200,224,.70)'];
+
+function rollD(e){
+  const s=String(e).toLowerCase().trim();
+  const m=s.match(/^(\d+)?d(\d+)([+-]\d+)?$/);
+  if(m){let t=parseInt(m[3]||0);const n=parseInt(m[1]||1),d=parseInt(m[2]);for(let i=0;i<n;i++)t+=Math.ceil(Math.random()*d);return Math.max(0,t);}
+  return parseFloat(s)||0;
+}
+function simWeapon(w,iters,sv){
+  const res=[];
+  for(let i=0;i<iters;i++){
+    let tot=0;
+    const atk=rollD(w.attacks);
+    for(let a=0;a<atk;a++){
+      if(Math.ceil(Math.random()*6)<w.hit)continue;
+      if(Math.ceil(Math.random()*6)<w.wound)continue;
+      const r=parseInt(w.rend)||0;
+      const es=Math.max(1,Math.min(6,sv+r));
+      if(es<=6&&Math.ceil(Math.random()*6)>=es)continue;
+      tot+=rollD(w.damage);
+    }
+    res.push(tot);
+  }
+  return res;
+}
+function simAll(u,iters,sv){
+  const res=[];
+  for(let i=0;i<iters;i++){
+    let tot=0;
+    u.weapons.forEach(w=>{
+      const atk=rollD(w.attacks);
+      for(let a=0;a<atk;a++){
+        if(Math.ceil(Math.random()*6)<w.hit)continue;
+        if(Math.ceil(Math.random()*6)<w.wound)continue;
+        const r=parseInt(w.rend)||0;
+        const es=Math.max(1,Math.min(6,sv+r));
+        if(es<=6&&Math.ceil(Math.random()*6)>=es)continue;
+        tot+=rollD(w.damage);
+      }
+    });
+    res.push(tot);
+  }
+  return res;
+}
+function renderDdToggles(u){
+  const el=document.getElementById('wpnToggles');
+  const allOn=_wpnActive.has('__all__');
+  let html=`<button class="wpn-tgl ${allOn?'all-on':''}" onclick="toggleWpn('__all__')">⚡ All combined</button>`;
+  u.weapons.forEach((w,i)=>{
+    const on=_wpnActive.has(String(i));
+    html+=`<button class="wpn-tgl ${on?'on':''}" style="${on?`border-color:${WPN_COLORS[i%WPN_COLORS.length]};color:${WPN_COLORS[i%WPN_COLORS.length]}`:''}" onclick="toggleWpn('${i}')">${isRanged(w.type,w.range)?'🏹':'⚔'} ${w.name}</button>`;
+  });
+  el.innerHTML=html;
+}
+function toggleWpn(key){
+  if(key==='__all__'){_wpnActive=new Set(['__all__']);}
+  else{
+    _wpnActive.delete('__all__');
+    if(_wpnActive.has(key))_wpnActive.delete(key);
+    else _wpnActive.add(key);
+    if(_wpnActive.size===0)_wpnActive=new Set(['__all__']);
+  }
+  renderDdToggles(unit);drawDd();
+}
+function drawDd(){
+  const u=unit;if(!u)return;
+  document.getElementById('ddEmp').classList.add('hidden');
+  document.getElementById('ddWrap').classList.remove('hidden');
+  const iters=parseInt(document.getElementById('selIt').value);
+  const sv=parseInt(document.getElementById('selSv').value);
+  const svStr=sv<=6?sv+'+':'no';
+
+  const datasets=[];
+  if(_wpnActive.has('__all__')){
+    const raw=simAll(u,iters,sv);
+    datasets.push({label:'All weapons',raw,col:'rgba(176,200,224,.80)',fillCol:'rgba(0,87,255,.10)'});
+  }else{
+    [..._wpnActive].sort((a,b)=>parseInt(a)-parseInt(b)).forEach(key=>{
+      const wi=parseInt(key);
+      if(wi>=0&&wi<u.weapons.length){
+        const w=u.weapons[wi];
+        const raw=simWeapon(w,iters,sv);
+        const col=WPN_COLORS[wi%WPN_COLORS.length];
+        datasets.push({label:w.name,raw,col,fillCol:col.replace('.80','.08')});
+      }
+    });
+  }
+  if(!datasets.length)return;
+
+  document.getElementById('ddT').textContent=u.name+' — Damage Distribution';
+  document.getElementById('ddS').textContent=`${iters.toLocaleString()} iter · vs ${svStr} save · ${datasets.map(d=>d.label).join(' + ')}`;
+
+  const cv=document.getElementById('cvDd');
+  const ctx=cv.getContext('2d');
+  const W=cv.parentElement.clientWidth||800;
+  cv.width=W;cv.height=340;
+
+  const globalMax=Math.max(...datasets.map(ds=>Math.max(...ds.raw)),1);
+  if(!globalMax){
+    ctx.fillStyle='#3a5060';ctx.font='14px Barlow';ctx.textAlign='center';
+    ctx.fillText('No damage output for selected weapons',W/2,170);return;
+  }
+
+  const STRIP=52;
+  const P={l:52,r:20,t:28,b:36};
+  const CH=cv.height-STRIP;
+  const PW=W-P.l-P.r,PH=CH-P.t-P.b;
+  const NUM_BUCKETS=Math.min(globalMax+1,40);
+  const bucketSize=globalMax/NUM_BUCKETS;
+
+  function bucket(raw){
+    const b=new Array(NUM_BUCKETS).fill(0);
+    raw.forEach(v=>{const bi=Math.min(Math.floor(v/bucketSize),NUM_BUCKETS-1);b[bi]++;});
+    return b;
+  }
+
+  const primary=datasets[0];
+  const sorted=[...primary.raw].sort((a,b)=>a-b);
+  const n=sorted.length;
+  function pct(p){const i=(p/100)*(n-1),lo=Math.floor(i),hi=Math.ceil(i);return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);}
+  const med=pct(50),p25=pct(25),p75=pct(75),iqr=p75-p25;
+  const mean=primary.raw.reduce((a,b)=>a+b,0)/n;
+
+  const allBkts=datasets.map(ds=>bucket(ds.raw));
+  const mxF=Math.max(...allBkts.flatMap(b=>b));
+  const xP25=P.l+(p25/globalMax)*PW,xP75=P.l+(p75/globalMax)*PW;
+
+  ctx.fillStyle='rgba(0,87,255,.07)';ctx.fillRect(xP25,P.t,Math.max(0,xP75-xP25),PH);
+
+  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;
+  for(let i=1;i<=4;i++){const gy=P.t+PH-(i/4)*PH;ctx.beginPath();ctx.moveTo(P.l,gy);ctx.lineTo(P.l+PW,gy);ctx.stroke();}
+
+  const GAP=1.5,slotW=PW/NUM_BUCKETS,barW=Math.max(2,slotW-GAP);
+  datasets.forEach((ds,di)=>{
+    const bkts=allBkts[di];
+    bkts.forEach((cnt,bi)=>{
+      if(!cnt)return;
+      const bMid=(bi+0.5)*bucketSize;
+      const inIQR=bMid>=p25&&bMid<=p75;
+      const x=P.l+bi*slotW+GAP/2;
+      const h=(cnt/mxF)*PH;
+      const y=P.t+PH-h;
+      let col=ds.col;
+      if(!inIQR)col=col.replace(/[\d.]+\)$/,'0.35)');
+      const dW=datasets.length>1?(barW/datasets.length):barW;
+      const dx=datasets.length>1?di*dW:0;
+      ctx.fillStyle=col;ctx.fillRect(x+dx,y,dW-0.5,h);
+    });
+  });
+
+  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(P.l,P.t);ctx.lineTo(P.l,P.t+PH);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(P.l,P.t+PH);ctx.lineTo(P.l+PW,P.t+PH);ctx.stroke();
+
+  ctx.fillStyle='#3a5060';ctx.font='9px DM Mono';ctx.textAlign='center';
+  const labelEvery=Math.ceil(NUM_BUCKETS/10);
+  for(let bi=0;bi<NUM_BUCKETS;bi+=labelEvery){
+    const midVal=((bi+0.5)*bucketSize).toFixed(bucketSize<1?1:0);
+    ctx.fillText(midVal,P.l+(bi+0.5)*slotW,P.t+PH+13);
+  }
+  ctx.fillText('Damage dealt',P.l+PW/2,P.t+PH+28);
+  ctx.textAlign='right';
+  for(let i=0;i<=4;i++){const f=Math.round(mxF/4*i);ctx.fillText((f/iters*100).toFixed(0)+'%',P.l-5,P.t+PH-(i/4)*PH+3);}
+  ctx.save();ctx.translate(14,P.t+PH/2);ctx.rotate(-Math.PI/2);
+  ctx.fillStyle='#3a5060';ctx.font='9px Barlow';ctx.textAlign='center';ctx.fillText('Frequency',0,0);ctx.restore();
+
+  function vl(val,col,dash,lbl,ly){
+    const x=P.l+(val/globalMax)*PW;
+    if(x<P.l||x>P.l+PW)return;
+    ctx.save();ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash(dash);
+    ctx.beginPath();ctx.moveTo(x,P.t);ctx.lineTo(x,P.t+PH);ctx.stroke();
+    ctx.setLineDash([]);ctx.fillStyle=col;ctx.font='bold 8px DM Mono';ctx.textAlign='center';
+    ctx.fillText(lbl,x,ly);ctx.restore();
+  }
+  vl(p25,'rgba(0,87,255,.8)',[3,2],'P25',P.t+10);
+  vl(p75,'rgba(0,87,255,.8)',[3,2],'P75',P.t+10);
+  vl(med,'rgba(0,201,177,.9)',[5,3],'MED',P.t+20);
+  vl(mean,'rgba(255,255,255,.5)',[2,3],'μ',P.t+30);
+
+  if(xP75-xP25>16){
+    const bY=P.t+3;
+    ctx.strokeStyle='rgba(0,87,255,.4)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(xP25,bY+7);ctx.lineTo(xP25,bY);ctx.lineTo(xP75,bY);ctx.lineTo(xP75,bY+7);ctx.stroke();
+    ctx.fillStyle='rgba(0,87,255,.5)';ctx.font='8px DM Mono';ctx.textAlign='center';
+    ctx.fillText('IQR='+iqr.toFixed(1),(xP25+xP75)/2,bY-1);
+  }
+
+  if(datasets.length>1){
+    let lx=P.l+8;
+    datasets.forEach(ds=>{
+      ctx.fillStyle=ds.col;ctx.fillRect(lx,P.t+6,10,6);
+      ctx.fillStyle='#7090a8';ctx.font='8px Barlow';ctx.textAlign='left';
+      ctx.fillText(ds.label.length>18?ds.label.slice(0,17)+'…':ds.label,lx+14,P.t+12);
+      lx+=130;
+    });
+  }
+
+  const sy=CH+6;
+  [{l:'MEDIAN',v:med.toFixed(2),c:'#00c9b1'},{l:'P25',v:p25.toFixed(2),c:'#0057ff'},
+   {l:'P75',v:p75.toFixed(2),c:'#0057ff'},{l:'IQR',v:iqr.toFixed(2),c:'#7090a8'},
+   {l:'MEAN',v:mean.toFixed(2),c:'#b0c8e0'},{l:'MAX',v:globalMax,c:'#7090a8'},
+   {l:'ITERS',v:iters.toLocaleString(),c:'#3a5060'}
+  ].forEach((s,i)=>{
+    const sx=W/7*i+W/14;
+    ctx.fillStyle=s.c;ctx.font='bold 12px DM Mono';ctx.textAlign='center';ctx.fillText(s.v,sx,sy+16);
+    ctx.fillStyle='#3a5060';ctx.font='8px Barlow';ctx.fillText(s.l,sx,sy+30);
+  });
+  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+  for(let i=1;i<7;i++){ctx.beginPath();ctx.moveTo(W/7*i,CH);ctx.lineTo(W/7*i,CH+STRIP);ctx.stroke();}
+  ctx.beginPath();ctx.moveTo(0,CH);ctx.lineTo(W,CH);ctx.stroke();
+}
+
+// ═══════════════ INIT ═══════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  loadCSV();
+  drawMx(); // draws empty state initially
+});
+window.addEventListener('resize',()=>{
+  if(tab==='mx')drawMx();
+  if(tab==='dd'&&unit)drawDd();
+});
+</script>
+</body>
+</html>
