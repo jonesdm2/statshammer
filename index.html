@@ -578,6 +578,7 @@ function setTab(t){
   if(t==='mx'){setTimeout(drawMx,30);}
   if(t==='dd'&&unit){renderDdToggles(unit);drawDd();}
   if(t==='st'&&unit)renderSt(unit);
+  if(t==='ws'&&unit)renderWs(unit);
 }
 
 // ═══════════════ LIST ═══════════════
@@ -588,24 +589,26 @@ function getList(){
   if(q)us=us.filter(u=>u.name.toLowerCase().includes(q));
   return us;
 }
+// Store filtered list for index-based lookup
+let _listCache=[];
 function renderList(){
   if(!UNITS.length)return;
-  const us=getList();
+  _listCache=getList();
   const el=document.getElementById('ulist');
-  if(!us.length){el.innerHTML='<div style="padding:14px;text-align:center;font-size:11px;color:var(--g400)">No units</div>';return;}
-  el.innerHTML=us.map(u=>{
+  if(!_listCache.length){el.innerHTML='<div style="padding:14px;text-align:center;font-size:11px;color:var(--g400)">No units</div>';return;}
+  el.innerHTML=_listCache.map((u,i)=>{
     const sel=unit&&unit.name===u.name&&unit.faction===u.faction?' sel':'';
     const q=quad(u);
     const ico=u.weapons.some(w=>isRanged(w.type,w.range))?'🏹':'⚔';
-    return`<div class="ur${sel}" onclick="selUnit(${JSON.stringify(u.name)},${JSON.stringify(u.faction)})">
+    return`<div class="ur${sel}" data-idx="${i}" onclick="selUnit(${i})">
       <span class="un">${u.name}</span>
       <span class="utag" style="color:${q.col}">${q.lbl[0]}</span>
       <span class="utag">${ico}</span>
     </div>`;
   }).join('');
 }
-function selUnit(n,f){
-  unit=UNITS.find(u=>u.name===n&&u.faction===f)||null;
+function selUnit(idx){
+  unit=_listCache[idx]||null;
   _wpnActive=new Set(['__all__']);
   renderList();
   if(unit&&tab==='dd'){renderDdToggles(unit);}
@@ -924,7 +927,7 @@ cvMx.addEventListener('click',e=>{
   const cx=(e.clientX-r.left)*sx,cy=(e.clientY-r.top)*sy;
   let near=null,dist=16;
   _mpts.forEach(p=>{const d=Math.hypot(p.x-cx,p.y-cy);if(d<dist){dist=d;near=p;}});
-  if(near)selUnit(near.u.name,near.u.faction);
+  if(near){unit=near.u;_wpnActive=new Set(['__all__']);renderList();dispatch();}
 });
 
 // ═══════════════ DISTRIBUTION ═══════════════
