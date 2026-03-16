@@ -554,10 +554,25 @@ function fc(f){return FC[f]||'#0057ff';}
 // ═══════════════ FETCH CSV ═══════════════
 async function loadCSV(){
   const badge=document.getElementById('loadbadge');
+  badge.textContent='LOADING…';badge.className='';
+  // Try direct first (works when hosted on GitHub Pages directly),
+  // then fall back to allorigins proxy (works inside Squarespace iframes
+  // where the CSP blocks direct cross-origin fetches).
+  async function fetchCSV(){
+    try{
+      const r=await fetch(CSV_URL,{mode:'cors',cache:'no-cache'});
+      if(r.ok)return r.text();
+    }catch(e){}
+    // Proxy fallback
+    const proxy='https://api.allorigins.win/get?url='+encodeURIComponent(CSV_URL);
+    const r=await fetch(proxy);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    if(!j.contents)throw new Error('Empty proxy response');
+    return j.contents;
+  }
   try{
-    const res=await fetch(CSV_URL);
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const text=await res.text();
+    const text=await fetchCSV();
     const lines=text.trim().split('\n');
     const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
     const rows=lines.slice(1).map(line=>{
