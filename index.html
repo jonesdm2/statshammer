@@ -2167,7 +2167,7 @@ function buildUnits(rows){
     u.rangedDmg=rd;
     u.totalDmg=md+rd;
     u.eHealth=calcEH(u.health,u.save,u.ward)*sz;
-    const pts=UNIT_PTS_LUT[key]||0;
+    const pts=UNIT_PTS_LUT[u.name+'|||'+u.faction]||0;
     u.pts=pts;
     u.d100=pts>0?u.totalDmg/pts*100:null;
     u.e100=pts>0?u.eHealth/pts*100:null;
@@ -2319,8 +2319,8 @@ async function loadCSV(fromNetwork=false){
   }catch(e){
     badge.textContent='LOAD FAILED';
     badge.className='err';
-    document.getElementById('ulist').innerHTML='<div style="padding:14px;text-align:center;font-size:11px;color:var(--red)">Failed to load data.<br>Check network or CORS.</div>';
-    console.error(e);
+    document.getElementById('ulist').innerHTML='<div style="padding:14px;text-align:center;font-size:11px;color:var(--red)">Error: '+e.message+'</div>';
+    console.error('loadCSV error:', e);
   }
 }
 
