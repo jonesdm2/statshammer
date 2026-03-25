@@ -2623,7 +2623,10 @@ function renderWs(u){
   const wd=parseWard(u.ward);
   document.getElementById('wWd').textContent=wd?wd+'+':'—';
   document.getElementById('wCt').textContent=u.control||'—';
-  document.getElementById('wPts').innerHTML='<span style="color:var(--g500)">—</span>';
+  const ptsVal=u.pts||0;
+  document.getElementById('wPts').innerHTML=ptsVal
+    ? ptsVal+'<span> pts</span>'
+    : '<span style="color:var(--g500)">—</span>';
   document.getElementById('wcD').textContent=fmtN(u.totalDmg);
   document.getElementById('wcM').textContent=fmtN(u.meleeDmg);
   document.getElementById('wcR').textContent=fmtN(u.rangedDmg);
@@ -2680,6 +2683,7 @@ function renderSt(u){
   const uType=getUnitType(u);
   // KPI grid — now includes D100 and E100
   const kpis=[
+    {v:u.pts||0,           l:'Points',    cls:'',    c:u.pts?'matched play cost':'no pts data'},
     {v:u.health,           l:'Health',    cls:'red'},
     {v:u.save||'—',        l:'Save',      cls:'acc'},
     {v:(parseWard(u.ward)?parseWard(u.ward)+'++':'—'), l:'Ward', cls:'gold'},
