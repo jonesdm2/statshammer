@@ -11,6 +11,9 @@ Both pages read one CSV file in the repo, from the same site.
 | `data/aos-units.csv` | The Age of Sigmar unit data both AoS pages use: one row per weapon, editable columns only. All probabilities, D100 and E100 are worked out by the pages. |
 | `tow/index.html` | The Old World Maths Lab (Combat, Break Test, Buffs, Game Mix, Efficiency Matrix). Reads `../data/tow-units.csv`. |
 | `data/tow-units.csv` | The Old World unit data: one row per unit (profile, troop type, armour, ward, regeneration, weapon Strength and AP, mounts, rule flags). Built from Old World Builder and the Online Rules Index. |
+| `w40k/index.html` | The 40K Maths Lab (Attack, Breakpoints, Buffs, Game Mix, Efficiency Matrix). Reads `../data/w40k-units.csv`. |
+| `data/w40k-units.csv` | The Warhammer 40,000 unit data: one row per weapon (unit profile repeated on each row, abilities as text such as `Lethal Hits, Anti-Vehicle 4+`). A unit several factions can take is listed once, under its own faction, with the others in `shared_with`. `model_groups` is filled only when a unit's models differ (for example `4x T3 W1 Sv4+ | 1x T3 W1 Sv4+ Inv5+`); a group with no `Inv` has no invulnerable save. Built from the BSData 11th edition catalogues. |
+| `export_w40k_csv.py` | How `data/w40k-units.csv` was made, kept for reference. |
 | `export_tow_csv.py` | How `data/tow-units.csv` was made from the extracted Old World data, kept for reference. |
 | `convert_app.py` | How `index.html` was converted from the original app, kept for reference. |
 
@@ -22,6 +25,7 @@ Each page also carries a built-in copy of the data. It's only used if the file c
 2. GitHub Pages serves:
    - the main app at **https://jonesdm2.github.io/statshammer/** (the address statshammer.com already embeds, so nothing changes there)
    - the lab at **https://jonesdm2.github.io/statshammer/lab/**
+   - the Old World lab at **https://jonesdm2.github.io/statshammer/tow/** and the 40K lab at **https://jonesdm2.github.io/statshammer/w40k/**
 3. To show the lab on statshammer.com, add an Embed/Code block with:
    `<iframe src="https://jonesdm2.github.io/statshammer/lab/" style="width:100%;height:1400px;border:0" loading="lazy"></iframe>`
 
