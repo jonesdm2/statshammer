@@ -429,12 +429,16 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
       <div class="pan">
         <div class="ph"><span class="pt">Efficiency Matrix</span><span class="psub">D100 × E100 · relative to the typical unit</span></div>
         <div class="pb">
+          <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:end;margin-bottom:10px">
+            <div><label class="sl" for="selCharge">Melee counts at a charge of</label><select id="selCharge"></select></div>
+            <p class="note" style="margin:0;flex:1 1 260px">A unit's fight only happens if it gets into combat, so D100 counts melee weapons at the chance of rolling this charge on 2D6. 9" is the closest a unit arriving from reserves can be set up.</p>
+          </div>
           <div class="prog" id="planeProg" hidden><span id="planeProgText">Working out every unit…</span><span class="track"><span class="bar" id="planeProgBar" style="width:0%"></span></span></div>
           <div class="planewrap">
             <svg class="chart plane" id="planeSvg" viewBox="0 0 640 480" role="img" aria-label="D100 against E100 for every unit"></svg>
             <div class="hbars">
               <div class="wcard" id="dotCard"></div>
-              <p class="note">D100: the share of an enemy unit destroyed per 100 points, against the points-weighted mix of every unit's defence. E100: effective wounds per 100 points against the attack-weighted mix of every weapon. One gridline step is double or half. Pick a faction in the sidebar to highlight it.</p>
+              <p class="note">D100: the share of an enemy unit destroyed per 100 points in one activation (shooting, then fighting if the charge comes off), against the points-weighted mix of every unit's defence. E100: effective wounds per 100 points against the attack-weighted mix of every weapon, scaled to a Toughness 4 target so a unit's own Toughness counts. One gridline step is double or half. Pick a faction in the sidebar to highlight it.</p>
             </div>
           </div>
         </div>
@@ -476,6 +480,8 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
                 <li>Units with different models (a sergeant, a bodyguard, a character) use one wound pool, and CHARACTER models are allocated last.</li>
               </ul>
             </li>
+            <li>D100 resolves shooting first, then the fight. The fight is counted at the chance of making the charge set above the matrix (default 9", 28% on 2D6); losses on the way in and fights where the unit is charged are not modelled. The Attack tab always counts the whole fight.</li>
+            <li>E100 is the expected number of the game's attacks needed to destroy the unit, times the damage each would do to a Toughness 4 model with no save. A unit's Toughness therefore counts: T7 against Strength 4 (wounded on 5+, not 4+) is worth half as much again as T4.</li>
             <li>Each unit uses its default loadout at its base size. Detachment rules, army rules, stratagems, auras, leaders attached to units and re-rolls from abilities are not included: this is the datasheet on its own.</li>
             <li>Weapons with several firing modes (marked ➤) are read on one profile. A variable ability such as Sustained Hits D3 is read at its average, and an ability that only works against some targets, such as Lethal Hits against non-vehicles, is left out. Both kinds are listed in the panel above.</li>
             <li>Feel No Pain is only counted where a datasheet gives it without conditions, which is two units. Most Feel No Pain in the game comes from abilities and army rules.</li>
@@ -577,6 +583,11 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
 
   /* ---------------- the rules (w40k.py) ---------------- */
   const MAX_BS = 7;
+  /* E100's comparison target has this Toughness, so a unit's own Toughness (the wound roll) counts in its E100 */
+  const REF_TOUGHNESS = 4;
+  /* D100 counts melee weapons at the chance of making a charge of this many inches (2D6), the Core Rules' reserves distance */
+  const DEFAULT_CHARGE = 9;
+  const chargeChance = (inches) => { let n = 0; for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) if (a + b >= inches) n++; return n / 36; };
   function woundTarget(s, t) {
     if (s >= 2 * t) return 2;
     if (s > t) return 3;
@@ -709,11 +720,17 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
   const phaseWeapons = (u, phase, weapons) =>
     (weapons || u.weapons).filter((w) => phase === "both" || phase == null || (phase === "ranged") === w.ranged);
 
-  function resolveState(u, t, sit, phase, weapons) {
+  /* shooting then fighting. With phase "both", meleeChance (default 1) is the chance the fight happens:
+     the result mixes "shot only" and "shot, then fought". */
+  function resolveState(u, t, sit, phase, weapons, meleeChance) {
     sit = makeSit(sit);
     const W = t.wounds, M = t.models;
-    let state = newState(M, W);
-    for (const w of phaseWeapons(u, phase, weapons)) {
+    const all = phaseWeapons(u, phase, weapons);
+    const ordered = all.filter((w) => w.ranged).concat(all.filter((w) => !w.ranged));
+    const p = phase === "both" && meleeChance != null ? meleeChance : 1;
+    let state = newState(M, W), shotOnly = null;
+    for (const w of ordered) {
+      if (!w.ranged && !shotOnly && p < 1) shotOnly = state;
       const nInst = compound(attackCountPmf(w, t, sit), instancesPerAttack(w, t, sit));
       const dmg = damagePmf(w, t, sit);
       const acc = new Float64Array(state.length);
@@ -725,12 +742,13 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
       }
       state = acc;
     }
+    if (shotOnly) for (let i = 0; i < state.length; i++) state[i] = (1 - p) * shotOnly[i] + p * state[i];
     return state;
   }
 
   /* every selected weapon attacks t, resolved weapon by weapon */
-  function unitVs(u, t, sit, phase, weapons) {
-    return stateStats(resolveState(u, t, sit, phase, weapons), t);
+  function unitVs(u, t, sit, phase, weapons, meleeChance) {
+    return stateStats(resolveState(u, t, sit, phase, weapons, meleeChance), t);
   }
 
   /* pmf of the wounds removed from t (for the damage chart) */
@@ -761,7 +779,7 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
     }
     return out;
   }
-  const baselineOf = (t) => ({ name: "baseline", points: 100, models: 1, toughness: t.toughness, wounds: 1e6, save: 7, invuln: null, fnp: null, keywords: [], weapons: [] });
+  const baselineOf = () => ({ name: "baseline", points: 100, models: 1, toughness: REF_TOUGHNESS, wounds: 1e6, save: 7, invuln: null, fnp: null, keywords: [], weapons: [] });
   const pmfKey = (p) => { let s = ""; for (let i = 0; i < p.length; i++) s += p[i].toFixed(12) + ","; return s; };
 
   function e100Mix(u, mix, sit) {
@@ -783,9 +801,9 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
     return ew * 100 / u.points;
   }
 
-  function d100Mix(u, mix, sit, phase) {
+  function d100Mix(u, mix, sit, phase, meleeChance) {
     let acc = 0;
-    for (const pair of mix) acc += pair[1] * unitVs(u, pair[0], sit, phase || "both").fractionDestroyed;
+    for (const pair of mix) acc += pair[1] * unitVs(u, pair[0], sit, phase || "both", null, meleeChance).fractionDestroyed;
     return acc * 100 / u.points;
   }
 
@@ -853,7 +871,7 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
   function e100Pooled(points, groups, toughness, fnp, keywords, attackers, sit) {
     sit = makeSit(sit);
     const cache = new Map();
-    const base = { toughness: toughness, save: 7, invuln: null, fnp: null, models: 1, wounds: 1e6, keywords: [] };
+    const base = { toughness: REF_TOUGHNESS, save: 7, invuln: null, fnp: null, models: 1, wounds: 1e6, keywords: [] };
     const probe = { toughness: toughness, save: 7, invuln: null, fnp: fnp, models: 1, wounds: 1, keywords: keywords };
     let ew = 0;
     for (const pair of attackers) {
@@ -1072,8 +1090,8 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
   }
 
   /* metrics for one unit against the game reference (build_w40k._work) */
-  function unitMetrics(u, tmix, amix, sit) {
-    return { d100: d100Mix(u, tmix, sit, "both"), e100: e100Of(u, amix, sit), oc100: u.models * u.oc * 100 / u.points, pooled: needsPool(u) };
+  function unitMetrics(u, tmix, amix, sit, meleeChance) {
+    return { d100: d100Mix(u, tmix, sit, "both", meleeChance == null ? chargeChance(DEFAULT_CHARGE) : meleeChance), e100: e100Of(u, amix, sit), oc100: u.models * u.oc * 100 / u.points, pooled: needsPool(u) };
   }
 
   /* the game reference (build_w40k.py). Metrics are filled in afterwards, unit by unit, so the page can
@@ -1081,11 +1099,12 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
   function buildGame(records, opts) {
     opts = opts || {};
     const cover = opts.cover == null ? 0.9 : opts.cover;
+    const charge = opts.charge == null ? DEFAULT_CHARGE : opts.charge;
     const all = buildUnits(records);
     const units = all.filter(usable);
     const tm = targetMix(units, cover), am = attackerMix(units, cover);
     return { units: units, all: all, skipped: all.length - units.length, targetMix: tm.mix, attackerMix: am.mix,
-             targetCover: tm.cover, attackerCover: am.cover, cover: cover, done: false };
+             targetCover: tm.cover, attackerCover: am.cover, cover: cover, charge: charge, meleeChance: chargeChance(charge), done: false };
   }
 
   /* place every unit with metrics on the plane and summarise each faction */
@@ -1116,7 +1135,7 @@ details summary { cursor: pointer; font-family: var(--cond); font-weight: 700; l
 
   const api = {
     point, trim, convolve, power, compound, mixPmf, mean, quantile, dice, expectedDrawsToReach,
-    woundTarget, clampMod, outcomes, pUnsaved, makeSit, critWound, instancesPerAttack, damagePmf, attackCountPmf,
+    REF_TOUGHNESS, DEFAULT_CHARGE, chargeChance, woundTarget, clampMod, outcomes, pUnsaved, makeSit, critWound, instancesPerAttack, damagePmf, attackCountPmf,
     newState, applyDamage, stateStats, resolve, resolveState, unitVs, woundsPmf, killIndexPmf, e100Mix, d100Mix,
     allocationOrder, woundsPerAttack, pooledKillIndex, e100Pooled, makeWeapon, parseAbilities, parseGroups,
     buildUnits, usable, needsPool, targetMix, attackerMix, geomean, armySummary, e100Of, unitMetrics, buildGame, placeGame,
@@ -1174,9 +1193,30 @@ function parseCSV(text) {
     .map((r) => Object.fromEntries(head.map((k, i) => [k, r[i] == null ? "" : r[i]])));
 }
 
+/* how D100 counts melee: the charge roll needed (2 = every fight happens) */
+S.charge = (() => { try { const v = parseInt(localStorage.getItem("statshammer.w40k.charge"), 10); return v >= 2 && v <= 12 ? v : K.DEFAULT_CHARGE; } catch (e) { return K.DEFAULT_CHARGE; } })();
+function renderChargeSelect() {
+  const opts = [];
+  for (let n = 3; n <= 12; n++) opts.push(`<option value="${n}">${n}" · ${Math.round(K.chargeChance(n) * 100)}%${n === K.DEFAULT_CHARGE ? " (default)" : ""}</option>`);
+  opts.push(`<option value="2">Every fight happens · 100%</option>`);
+  $("selCharge").innerHTML = opts.join("");
+  $("selCharge").value = String(S.game ? S.game.charge : S.charge);
+}
+function setCharge(n) {
+  S.charge = n;
+  try { localStorage.setItem("statshammer.w40k.charge", String(n)); } catch (e) { /* per-viewer convenience only */ }
+  const g = S.game;
+  if (!g) return;
+  if (S.job) { clearTimeout(S.job); S.job = null; }
+  g.charge = n; g.meleeChance = K.chargeChance(n); g.done = false; S.buffGame = null;
+  runMetrics();
+  renderAll();
+}
+$("selCharge").addEventListener("change", (e) => setCharge(parseInt(e.target.value, 10)));
+
 function loadText(text, source) {
   const records = parseCSV(text);
-  const game = K.buildGame(records, { cover: 0.9 });
+  const game = K.buildGame(records, { cover: 0.9, charge: S.charge });
   const keepA = S.attacker && unitKey(S.attacker), keepT = S.target && unitKey(S.target);
   if (S.job) { clearTimeout(S.job); S.job = null; }
   S.game = game; S.rowsN = records.length; S.source = source; S.buffGame = null; S.off = new Set();
@@ -1195,6 +1235,7 @@ function loadText(text, source) {
   S.card = (keepC && byKey(keepC)) || S.attacker;
   if (!S.faction || !game.units.some((u) => u.faction === S.faction)) S.faction = "";
   S.pinned = null;
+  renderChargeSelect();
   resetTarget();
   initUI();
   runMetrics();
@@ -1236,7 +1277,7 @@ function runMetrics() {
   const step = () => {
     const t0 = Date.now();
     while (i < units.length && Date.now() - t0 < 60) {
-      units[i].metrics = K.unitMetrics(units[i], g.targetMix, g.attackerMix);
+      units[i].metrics = K.unitMetrics(units[i], g.targetMix, g.attackerMix, {}, g.meleeChance);
       i++;
     }
     g.progress = i / units.length;
@@ -1694,8 +1735,8 @@ function computeBuffGame() {
     const t0 = Date.now();
     while (i < units.length && Date.now() - t0 < 60) {
       const u = units[i];
-      const d0 = K.d100Mix(u, tm.mix);
-      const res = BUFFS_OFF.map(([k, f]) => { const v = buffedUnit(u, f); const x = d0 > 0 ? K.d100Mix(v, tm.mix) / d0 - 1 : 0; add(k, "Damage", x); return [k, x]; });
+      const d0 = K.d100Mix(u, tm.mix, {}, "both", S.game.meleeChance);
+      const res = BUFFS_OFF.map(([k, f]) => { const v = buffedUnit(u, f); const x = d0 > 0 ? K.d100Mix(v, tm.mix, {}, "both", S.game.meleeChance) / d0 - 1 : 0; add(k, "Damage", x); return [k, x]; });
       const top = Math.max.apply(null, res.map((r) => r[1]));
       res.filter((r) => Math.abs(r[1] - top) < 1e-9).forEach((r) => { tally.get(r[0]).best++; });
       const e0 = K.e100Of(u, am.mix);

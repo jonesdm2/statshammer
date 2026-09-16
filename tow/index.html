@@ -426,7 +426,7 @@ button.chip.rl:hover { border-color: var(--blue-ink); color: var(--g50); }
             <svg class="chart plane" id="planeSvg" viewBox="0 0 640 480" role="img" aria-label="Wounds100 against E100 for every unit"></svg>
             <div class="hbars">
               <div class="wcard" id="dotCard"></div>
-              <p class="note">Wounds100: unsaved wounds per 100 points against the points-weighted mix of every unit's defence. E100: effective wounds per 100 points against the attack-weighted mix of every weapon. Rank-and-file units are measured at full ranks. One gridline step is double or half. Pick an army in the sidebar to highlight it.</p>
+              <p class="note">Wounds100: unsaved wounds per 100 points against the points-weighted mix of every unit's defence. E100: effective wounds per 100 points against the attack-weighted mix of every weapon, measured against a WS4 T4 model so a unit's own Weapon Skill and Toughness count. Rank-and-file units are measured at full ranks. One gridline step is double or half. Pick an army in the sidebar to highlight it.</p>
             </div>
           </div>
         </div>
@@ -466,6 +466,7 @@ button.chip.rl:hover { border-color: var(--blue-ink); color: var(--g50); }
                 <li>Armour Bane improves AP on a natural 6 to wound. Cleaving Blow ignores armour and Regeneration on a natural 6 against infantry, cavalry and war beasts. Poisoned Attacks give +2 to wound on a natural 6 to hit.</li>
               </ul>
             </li>
+            <li>E100 is the unit's Wounds times how much harder the game's attacks find it to hit, wound and get through its saves than a WS4 T4 model with no save (the game's most common profile). A unit's Weapon Skill and Toughness therefore count as well as its armour, ward and Regeneration.</li>
             <li>Only weapons with Fight in Extra Rank make supporting attacks, one per supporting model. Rank bonus depends on troop type (Horde +1). Combat result counts unsaved wounds, capped at the enemy's total Wounds, plus ranks, standard, Battle Standard, flank or rear.</li>
             <li>Break test: Stubborn declines its first test. Unbreakable units don't test. Unstable units lose a Wound per point they lose by, less Indomitable.</li>
             <li>Not modelled: charge bonuses (Impact Hits, lances), Hatred, Frenzy, Strike First/Last and casualty order, magic items, spells, shooting, characters joined to units, and Killing Blow / Multiple Wounds. Each unit uses its default weapon and mount.</li>
@@ -524,6 +525,9 @@ button.chip.rl:hover { border-color: var(--blue-ink); color: var(--g50); }
   const BIG = new Set(["Heavy Chariot", "Light Chariot", "War Machine", "Behemoth", "Monstrous Creature"]);
   const SPECIAL = /Impact Hits|Stomp Attacks|Thunderstomp|Grind|Breath Weapon|Random Attacks|Steam Attack/i;
   const COVER = 0.95;
+  /* E100's comparison model has this Weapon Skill and Toughness (the game's most common profile), so a unit's own
+     WS and Toughness count in its E100 */
+  const REF_WS = 4, REF_T = 4;
 
   function makeUnit(o) {
     return Object.assign({
@@ -633,7 +637,7 @@ button.chip.rl:hover { border-color: var(--blue-ink); color: var(--g50); }
 
   function e100(u, attackers) {
     let tot = 0, ew = 0;
-    const naked = makeUnit({ name: "naked", points: 1, models: 1, width: 1, ws: u.ws, s: 1, t: u.t, w: 1, a: 1, ld: 10, troop: u.troop });
+    const naked = makeUnit({ name: "naked", points: 1, models: 1, width: 1, ws: REF_WS, s: 1, t: REF_T, w: 1, a: 1, ld: 10, troop: u.troop });
     for (const [a, wt] of attackers) {
       const through = woundsPerAttack(a, u);
       const base = woundsPerAttack(a, naked);
@@ -867,7 +871,7 @@ button.chip.rl:hover { border-color: var(--blue-ink); color: var(--g50); }
              wref, eref, cref, armies, skipped, planeUnits: ok.length };
   }
 
-  const api = { TO_HIT, TO_WOUND, TROOP, makeUnit, pRoll, pHit, woundTarget, pWound, combatArmour, pUnsaved, strengthOf,
+  const api = { REF_WS, REF_T, TO_HIT, TO_WOUND, TROOP, makeUnit, pRoll, pHit, woundTarget, pWound, combatArmour, pUnsaved, strengthOf,
     unsavedPerHit, woundsPerAttack, attacksMade, rankBonus, unitStrength, expectedWounds, combatResult, ce100, e100,
     unstableLoss, breakOutcomes, binomial, convolve, woundsPmf, mean, parseRow, parseStrength, parseMounts, usable,
     isRankAndFile, toUnit, fullRankModels, defenderMix, attackerMix, pBreak, geomean, armySummary, buildGame };
