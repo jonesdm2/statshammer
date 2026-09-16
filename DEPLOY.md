@@ -41,6 +41,24 @@ The Google Sheet is no longer needed by either page. You can unpublish it once t
 - Refresh no longer adds duplicate factions to the dropdown.
 - The app's own maths is otherwise unchanged. For exact probabilities, use the lab.
 
+## Unit Card (all three labs)
+
+Each lab has a **Unit Card** tab: everything on the unit's warscroll, datasheet or army list entry that you need at the table, plus the lab's own numbers. On that tab, clicking a unit in the sidebar opens its card without changing the attacker or target. **Print card** prints just the card.
+
+What each card shows:
+- **Age of Sigmar:** Move, Health, Save, Control, Ward; every weapon (option weapons marked); each ability's name, type, timing, casting or chanting value and keywords; unit size, points, command models, warscrolls bought together; keywords.
+- **The Old World:** every profile row (models, champion, mount, crew); equipment, weapon and armour in combat; special rules; every option with its points cost (command group, equipment, armour, options, mounts); magic item allowance, lores and army composition limits.
+- **40K:** every model's stat line; ranged and melee weapons with keywords, including other wargear (marked "option") and other firing modes; core, faction, datasheet and wargear ability names; unit size, points by size and model composition; keywords and faction keywords.
+
+**Ability wording.** The data files don't hold rules text; the cards read it the way army builders do:
+- **Age of Sigmar and 40K:** when you open a card, the page downloads the unit's BSData file from GitHub (pinned to the commit the data file was built from) and shows each ability's wording under its name. On the live site this takes a moment the first time for each faction; opened from your computer or in a Claude preview, GitHub can't be reached and only the names show.
+- **The Old World:** click a special rule, weapon or option and it opens that page of the Warhammer: The Old World Online Rules Index in a pop-up, as Old World Builder does.
+
+The columns the cards read:
+- `data/aos-units.csv`: `warscroll_abilities` (repeated on each of the unit's rows, like the other unit columns), written as `Name [Type · Timing · Casting value 7 · Keywords] | Name [Passive]`, and `rules_source` (`Stormcast Eternals - Library.cat#e914-877f-21fe-8db9`: the BSData file and warscroll the wording is read from). `add_card_columns.py` in the lab sources refreshes both.
+- `data/tow-units.csv`: `profiles` (`Name: M4 WS3 … Ld7 | …`), `unit_size`, `equipment`, `equipment_options`, `armour_options`, `options`, `command`, `mount_options` (each `Name (+5 pts per model); …`), `magic_items`, `lores`, `composition_notes`, and `rule_links` (`Furious Charge=special-rules/furious-charge | …`, the Rules Index page for each name).
+- `data/w40k-units.csv`: `Ld`, `unit_size`, `points_by_size`, `composition`, `profiles`, `rules`, `datasheet_abilities`, `wargear_abilities`, `faction_keywords`, `rules_refs` (`Hail of Bolts=Imperium - Space Marines.json#4207-56a0-b930-84bd | …`, where each ability's wording is read from), and per weapon `loadout` (`Default`, `Option` or `Mode`), `range`, `weapon_keywords`. Only `Default` weapons count in the maths. To keep the file small enough to edit on github.com, a 40K unit's own columns are filled on its first row only; its other rows carry just the name, faction and id.
+
 ## Update the data
 
 - **Small edits:** open `data/aos-units.csv` on github.com → pencil icon → edit → **Commit changes**. The lab shows the new data on its next load; there's nothing to rebuild.
