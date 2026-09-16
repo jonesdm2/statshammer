@@ -8,7 +8,10 @@ Both pages read one CSV file in the repo, from the same site.
 |---|---|
 | `index.html` | The main Statshammer app (Warscroll, Unit Stats, Efficiency Matrix, Damage Distribution). Now reads `data/aos-units.csv`. It no longer uses the Google Sheet or the built-in points and unit-size tables. |
 | `lab/index.html` | The AoS Maths Lab. Reads `../data/aos-units.csv`. |
-| `data/aos-units.csv` | The unit data both pages use: one row per weapon, editable columns only. All probabilities, D100 and E100 are worked out by the pages. |
+| `data/aos-units.csv` | The Age of Sigmar unit data both AoS pages use: one row per weapon, editable columns only. All probabilities, D100 and E100 are worked out by the pages. |
+| `tow/index.html` | The Old World Maths Lab (Combat, Break Test, Buffs, Game Mix, Efficiency Matrix). Reads `../data/tow-units.csv`. |
+| `data/tow-units.csv` | The Old World unit data: one row per unit (profile, troop type, armour, ward, regeneration, weapon Strength and AP, mounts, rule flags). Built from Old World Builder and the Online Rules Index. |
+| `export_tow_csv.py` | How `data/tow-units.csv` was made from the extracted Old World data, kept for reference. |
 | `convert_app.py` | How `index.html` was converted from the original app, kept for reference. |
 
 Each page also carries a built-in copy of the data. It's only used if the file can't be loaded (for example when the HTML is opened straight from your computer).
